@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import Dict
 
 from predict import predict_disease
 from medicine import calculate_medicine_demand
@@ -8,17 +8,11 @@ from medicine import calculate_medicine_demand
 app = FastAPI(title="MediPredict API", version="1.0.0")
 
 
-class PatientInput(BaseModel):
-    age: int
-    gender: str
+class PredictionInput(BaseModel):
+    year: int
+    month: int
     state: str
-    city: str
-    season: str
-    symptoms: str
-    bmi: float
-    smoking_status: str
-    alcohol_use: str
-    comorbidity: str
+    disease_name: str
 
 
 class MedicineRequest(BaseModel):
@@ -31,9 +25,9 @@ def home():
 
 
 @app.post("/predict-disease")
-def predict_disease_route(patient: PatientInput):
+def predict_disease_route(data: PredictionInput):
     try:
-        result = predict_disease(patient.dict())
+        result = predict_disease(data.model_dump())
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
