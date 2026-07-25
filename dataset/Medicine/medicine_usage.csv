@@ -1,0 +1,66 @@
+disease_name,medicine_name,quantity_per_patient
+Anxiety Disorder,Escitalopram,1
+Anxiety Disorder,Clonazepam,3
+Asthma,Salbutamol,5
+Asthma,Budesonide,2
+Breast Cancer,Tamoxifen,1
+Breast Cancer,Paclitaxel,2
+COPD,Tiotropium,2
+COPD,Salbutamol,3
+COVID-19,Paracetamol,4
+COVID-19,Azithromycin,1
+COVID-19,Vitamin C,3
+Chikungunya,Paracetamol,4
+Chikungunya,ORS,1
+Cholera,ORS,1
+Cholera,Doxycycline,1
+Chronic Kidney Disease,Furosemide,4
+Chronic Kidney Disease,Erythropoietin,4
+Dengue,Paracetamol,3
+Dengue,ORS,1
+Depression,Sertraline,3
+Depression,Fluoxetine,5
+Diabetes (Type 2),Metformin,1
+Diabetes (Type 2),Insulin,3
+Diarrhea,ORS,3
+Diarrhea,Zinc,5
+Filariasis,DEC,1
+Filariasis,Albendazole,3
+Gastroenteritis,ORS,1
+Gastroenteritis,Metronidazole,4
+HIV/AIDS,Tenofovir,2
+HIV/AIDS,Lamivudine,4
+Heart Disease,Aspirin,5
+Heart Disease,Atorvastatin,2
+Hepatitis B,Tenofovir,3
+Hepatitis B,Entecavir,3
+Hypertension,Amlodipine,2
+Hypertension,Telmisartan,4
+Japanese Encephalitis,Paracetamol,5
+Japanese Encephalitis,Mannitol,3
+Jaundice (Hepatitis A),ORS,2
+Jaundice (Hepatitis A),Vitamin B Complex,2
+Kala-Azar,Amphotericin B,2
+Kala-Azar,Miltefosine,5
+Leptospirosis,Doxycycline,5
+Leptospirosis,Penicillin,4
+Lung Cancer,Cisplatin,3
+Lung Cancer,Paclitaxel,3
+Malaria,Artemether,2
+Malaria,Chloroquine,1
+Oral Cancer,Cisplatin,4
+Oral Cancer,Fluorouracil,4
+Pneumonia,Amoxicillin,5
+Pneumonia,Azithromycin,3
+Sickle Cell Anemia,Hydroxyurea,1
+Sickle Cell Anemia,Folic Acid,2
+Stroke,Aspirin,5
+Stroke,Clopidogrel,5
+Swine Flu (H1N1),Oseltamivir,1
+Swine Flu (H1N1),Paracetamol,3
+Thalassemia,Folic Acid,4
+Thalassemia,Deferasirox,1
+Tuberculosis,Rifampicin,5
+Tuberculosis,Isoniazid,4
+Typhoid,Cefixime,4
+Typhoid,Azithromycin,3
