@@ -1,0 +1,66 @@
+disease_name,medicine_name
+Anxiety Disorder,Escitalopram
+Anxiety Disorder,Clonazepam
+Asthma,Salbutamol
+Asthma,Budesonide
+Breast Cancer,Tamoxifen
+Breast Cancer,Paclitaxel
+COPD,Tiotropium
+COPD,Salbutamol
+COVID-19,Paracetamol
+COVID-19,Azithromycin
+COVID-19,Vitamin C
+Chikungunya,Paracetamol
+Chikungunya,ORS
+Cholera,ORS
+Cholera,Doxycycline
+Chronic Kidney Disease,Furosemide
+Chronic Kidney Disease,Erythropoietin
+Dengue,Paracetamol
+Dengue,ORS
+Depression,Sertraline
+Depression,Fluoxetine
+Diabetes (Type 2),Metformin
+Diabetes (Type 2),Insulin
+Diarrhea,ORS
+Diarrhea,Zinc
+Filariasis,DEC
+Filariasis,Albendazole
+Gastroenteritis,ORS
+Gastroenteritis,Metronidazole
+HIV/AIDS,Tenofovir
+HIV/AIDS,Lamivudine
+Heart Disease,Aspirin
+Heart Disease,Atorvastatin
+Hepatitis B,Tenofovir
+Hepatitis B,Entecavir
+Hypertension,Amlodipine
+Hypertension,Telmisartan
+Japanese Encephalitis,Paracetamol
+Japanese Encephalitis,Mannitol
+Jaundice (Hepatitis A),ORS
+Jaundice (Hepatitis A),Vitamin B Complex
+Kala-Azar,Amphotericin B
+Kala-Azar,Miltefosine
+Leptospirosis,Doxycycline
+Leptospirosis,Penicillin
+Lung Cancer,Cisplatin
+Lung Cancer,Paclitaxel
+Malaria,Artemether
+Malaria,Chloroquine
+Oral Cancer,Cisplatin
+Oral Cancer,Fluorouracil
+Pneumonia,Amoxicillin
+Pneumonia,Azithromycin
+Sickle Cell Anemia,Hydroxyurea
+Sickle Cell Anemia,Folic Acid
+Stroke,Aspirin
+Stroke,Clopidogrel
+Swine Flu (H1N1),Oseltamivir
+Swine Flu (H1N1),Paracetamol
+Thalassemia,Folic Acid
+Thalassemia,Deferasirox
+Tuberculosis,Rifampicin
+Tuberculosis,Isoniazid
+Typhoid,Cefixime
+Typhoid,Azithromycin
