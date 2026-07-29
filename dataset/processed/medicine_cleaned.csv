@@ -1,0 +1,16 @@
+Medicine_ID,Medicine_Name,Current_Stock,Reorder_Level,Stock_Status,Expiry_Date,Supplier,PHC_Name
+M001,Paracetamol,500,120,In Stock,2027-06-30,ABC Pharma,Rampur PHC
+M002,ORS,180,80,In Stock,2027-03-15,HealthMed,Rampur PHC
+M003,Cough Syrup,75,50,Low Stock,2026-11-10,MediCare,Shivpur PHC
+M004,Cetirizine,220,60,In Stock,2027-01-20,ABC Pharma,Shivpur PHC
+M005,Amoxicillin,95,100,Low Stock,2026-12-25,LifeCare,Ganeshwadi PHC
+M006,Azithromycin,140,70,In Stock,2027-05-18,Cure Pharma,Ganeshwadi PHC
+M007,Artemether,110,60,In Stock,2027-04-01,HealthMed,Lakshmi PHC
+M008,Rifampicin,85,50,In Stock,2027-08-10,TB Care,Lakshmi PHC
+M009,Salbutamol,40,50,Low Stock,2026-10-05,MediCare,Savitri PHC
+M010,Iron Tablets,260,100,In Stock,2027-07-15,NutriMed,Savitri PHC
+M011,Zinc Tablets,150,70,In Stock,2027-02-02,HealthMed,Rampur PHC
+M012,Vitamin C,0,40,Out of Stock,2026-09-30,ABC Pharma,Shivpur PHC
+M013,Metformin,170,60,In Stock,2027-06-01,LifeCare,Ganeshwadi PHC
+M014,Amlodipine,130,50,In Stock,2027-03-21,Cure Pharma,Lakshmi PHC
+M015,Ibuprofen,90,50,In Stock,2027-01-11,ABC Pharma,Savitri PHC

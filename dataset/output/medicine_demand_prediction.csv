@@ -1,0 +1,2 @@
+Village,Disease,Season,Year,Month,Predicted_Cases,Medicine_Name,Quantity,Patients,Medicine_Per_Patient,Required_Quantity,Medicine_ID,Current_Stock,Reorder_Level,Stock_Status,Expiry_Date,Supplier,PHC_Name,Days_Left,Expiry_Alert,Remaining_Stock,Alert
+Rampur,Fever,Winter,2026,7,2,Paracetamol,1517,268,5.66044776119403,11.32089552238806,M001,500,120,In Stock,2027-06-30,ABC Pharma,Rampur PHC,336,SAFE,488.67910447761193,STOCK AVAILABLE
