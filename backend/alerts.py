@@ -1,48 +1,12 @@
-from medicine import calculate_medicine_demand
+import pandas as pd
+
+from config import STOCK_ALERT_PATH
 
 
-def generate_alerts(predicted_cases):
+def get_alerts():
 
-    alerts = []
+    alerts = pd.read_csv(STOCK_ALERT_PATH)
 
-    # -------------------------
-    # Disease Outbreak Alerts
-    # -------------------------
-    for disease, cases in predicted_cases.items():
-
-        if cases >= 200:
-            alerts.append({
-                "type": "Disease Outbreak",
-                "severity": "High",
-                "message": f"High risk of {disease} outbreak. Predicted cases: {cases}"
-            })
-
-        elif cases >= 100:
-            alerts.append({
-                "type": "Disease Outbreak",
-                "severity": "Medium",
-                "message": f"{disease} cases are increasing. Predicted cases: {cases}"
-            })
-
-    # -------------------------
-    # Medicine Stock Alerts
-    # -------------------------
-    medicines = calculate_medicine_demand(predicted_cases)
-
-    for item in medicines:
-
-        if item["restock_needed"] > 0:
-
-            alerts.append({
-
-                "type": "Medicine Stock",
-
-                "severity": "High",
-
-                "message":
-                f"{item['medicine']} requires restocking. "
-                f"Need {item['restock_needed']} more units."
-
-            })
-
-    return alerts
+    return alerts.to_dict(
+        orient="records"
+    )
