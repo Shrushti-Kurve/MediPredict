@@ -1,6 +1,6 @@
 import api from "./api";
 
-export const getMedicineDemand = async (data) => {
-  const response = await api.post("/medicine-demand", data);
+export const getMedicine = async (disease) => {
+  const response = await api.get(`/medicine/${disease}`);
   return response.data;
 };

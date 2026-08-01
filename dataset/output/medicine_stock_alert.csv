@@ -1,0 +1,16 @@
+Medicine_ID,Medicine_Name,Current_Stock,Reorder_Level,Stock_Status,Expiry_Date,Supplier,PHC_Name,Days_Left,Expiry_Alert,Required_Quantity,Remaining_Stock,Alert
+M001,Paracetamol,500,120,In Stock,2027-06-30,ABC Pharma,Rampur PHC,335,SAFE,11.32089552238806,488.67910447761193,STOCK AVAILABLE
+M002,ORS,180,80,In Stock,2027-03-15,HealthMed,Rampur PHC,228,SAFE,0.0,180.0,NO DEMAND
+M003,Cough Syrup,75,50,Low Stock,2026-11-10,MediCare,Shivpur PHC,103,SAFE,0.0,75.0,NO DEMAND
+M004,Cetirizine,220,60,In Stock,2027-01-20,ABC Pharma,Shivpur PHC,174,SAFE,0.0,220.0,NO DEMAND
+M005,Amoxicillin,95,100,Low Stock,2026-12-25,LifeCare,Ganeshwadi PHC,148,SAFE,0.0,95.0,NO DEMAND
+M006,Azithromycin,140,70,In Stock,2027-05-18,Cure Pharma,Ganeshwadi PHC,292,SAFE,0.0,140.0,NO DEMAND
+M007,Artemether,110,60,In Stock,2027-04-01,HealthMed,Lakshmi PHC,245,SAFE,0.0,110.0,NO DEMAND
+M008,Rifampicin,85,50,In Stock,2027-08-10,TB Care,Lakshmi PHC,376,SAFE,0.0,85.0,NO DEMAND
+M009,Salbutamol,40,50,Low Stock,2026-10-05,MediCare,Savitri PHC,67,SAFE,0.0,40.0,NO DEMAND
+M010,Iron Tablets,260,100,In Stock,2027-07-15,NutriMed,Savitri PHC,350,SAFE,0.0,260.0,NO DEMAND
+M011,Zinc Tablets,150,70,In Stock,2027-02-02,HealthMed,Rampur PHC,187,SAFE,0.0,150.0,NO DEMAND
+M012,Vitamin C,0,40,Out of Stock,2026-09-30,ABC Pharma,Shivpur PHC,62,SAFE,0.0,0.0,NO DEMAND
+M013,Metformin,170,60,In Stock,2027-06-01,LifeCare,Ganeshwadi PHC,306,SAFE,0.0,170.0,NO DEMAND
+M014,Amlodipine,130,50,In Stock,2027-03-21,Cure Pharma,Lakshmi PHC,234,SAFE,0.0,130.0,NO DEMAND
+M015,Ibuprofen,90,50,In Stock,2027-01-11,ABC Pharma,Savitri PHC,165,SAFE,0.0,90.0,NO DEMAND

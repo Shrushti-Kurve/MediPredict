@@ -1,22 +1,24 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Dict
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from predict import predict_disease
-from medicine import calculate_medicine_demand
+from schemas import PredictionRequest
+from predict import predict_outbreak
+from medicine import get_medicine_requirement
+from alerts import get_alerts
+from dashboard import dashboard
 
-app = FastAPI(title="MediPredict API", version="1.0.0")
+app = FastAPI(
+    title="MediPredict API",
+    version="2.0"
+)
 
-
-class PredictionInput(BaseModel):
-    year: int
-    month: int
-    state: str
-    disease_name: str
-
-
-class MedicineRequest(BaseModel):
-    predicted_cases: Dict[str, int]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
@@ -24,19 +26,21 @@ def home():
     return {"message": "MediPredict Backend Running"}
 
 
-@app.post("/predict-disease")
-def predict_disease_route(data: PredictionInput):
-    try:
-        result = predict_disease(data.model_dump())
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/predict-outbreak")
+def predict(data: PredictionRequest):
+    return predict_outbreak(data.model_dump())
 
 
-@app.post("/medicine-demand")
-def medicine_demand_route(data: MedicineRequest):
-    try:
-        result = calculate_medicine_demand(data.predicted_cases)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/medicine/{disease}")
+def medicine(disease: str):
+    return get_medicine_requirement(disease)
+
+
+@app.get("/alerts")
+def alerts():
+    return get_alerts()
+
+
+@app.post("/dashboard")
+def dashboard_api(data: PredictionRequest):
+    return dashboard(data.model_dump())
