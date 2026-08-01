@@ -1,95 +1,225 @@
 import { useState } from "react";
-import { predictDisease } from "../api/predictionApi";
+
+import Sidebar from "../components/Sidebar";
+import Navbar from "../components/Navbar";
+
 
 function DiseasePrediction() {
-  const [year, setYear] = useState("");
-  const [month, setMonth] = useState("");
-  const [state, setState] = useState("");
-  const [disease, setDisease] = useState("");
 
-  const [result, setResult] = useState(null);
+  const [patient, setPatient] = useState({
+    name:"",
+    age:"",
+    gender:"",
+    symptoms:""
+  });
 
-  const handlePredict = async () => {
-    try {
-      const response = await predictDisease({
-        year: Number(year),
-        month: Number(month),
-        state,
-        disease_name: disease,
-      });
 
-      setResult(response);
-    } catch (error) {
-      console.log(error);
-      alert("Prediction Failed");
-    }
+  const [result,setResult] = useState(null);
+
+
+  const handleChange = (e)=>{
+
+    setPatient({
+      ...patient,
+      [e.target.name]:e.target.value
+    });
+
   };
 
+
+  const predictDisease = (e)=>{
+
+    e.preventDefault();
+
+
+    // Dummy prediction result
+    const prediction = {
+
+      disease:"Malaria",
+
+      accuracy:"92%",
+
+      recommendation:
+      "Consult doctor and perform blood test."
+
+    };
+
+
+    setResult(prediction);
+
+  };
+
+
+
   return (
-    <div style={{ padding: "30px" }}>
-      <h1>Disease Prediction</h1>
 
-      <br />
+    <>
 
-      <input
-        type="number"
-        placeholder="Year"
-        value={year}
-        onChange={(e) => setYear(e.target.value)}
-      />
+    <Sidebar />
 
-      <br />
-      <br />
 
-      <input
-        type="number"
-        placeholder="Month"
-        value={month}
-        onChange={(e) => setMonth(e.target.value)}
-      />
+    <div className="dashboard-container">
 
-      <br />
-      <br />
 
-      <input
-        type="text"
-        placeholder="State"
-        value={state}
-        onChange={(e) => setState(e.target.value)}
-      />
+      <Navbar />
 
-      <br />
-      <br />
 
-      <input
-        type="text"
-        placeholder="Disease"
-        value={disease}
-        onChange={(e) => setDisease(e.target.value)}
-      />
+      <div className="dashboard-content">
 
-      <br />
-      <br />
 
-      <button onClick={handlePredict}>
-        Predict
-      </button>
+        <h1>Disease Prediction</h1>
 
-      <br />
-      <br />
 
-      {result && (
-        <div>
-          <h2>Prediction Result</h2>
 
-          <p>
-            Predicted Cases:
-            <strong> {result.predicted_cases}</strong>
-          </p>
+        <div className="prediction-container">
+
+
+
+          <form 
+          className="prediction-form"
+          onSubmit={predictDisease}
+          >
+
+
+            <h2>Patient Information</h2>
+
+
+            <input
+
+            type="text"
+
+            name="name"
+
+            placeholder="Patient Name"
+
+            value={patient.name}
+
+            onChange={handleChange}
+
+            />
+
+
+
+            <input
+
+            type="number"
+
+            name="age"
+
+            placeholder="Age"
+
+            value={patient.age}
+
+            onChange={handleChange}
+
+            />
+
+
+
+
+            <select
+
+            name="gender"
+
+            value={patient.gender}
+
+            onChange={handleChange}
+
+            >
+
+              <option value="">
+                Select Gender
+              </option>
+
+              <option>
+                Male
+              </option>
+
+              <option>
+                Female
+              </option>
+
+
+            </select>
+
+
+
+
+            <textarea
+
+            name="symptoms"
+
+            placeholder="Enter Symptoms (fever, cough, headache)"
+
+            value={patient.symptoms}
+
+            onChange={handleChange}
+
+            />
+
+
+            <button type="submit">
+
+              Predict Disease
+
+            </button>
+
+
+
+          </form>
+
+
+
+
+
+          {
+
+          result &&
+
+          <div className="prediction-result">
+
+
+            <h2>
+              Prediction Result
+            </h2>
+
+
+            <h3>
+              Disease: {result.disease}
+            </h3>
+
+
+            <p>
+              Accuracy: {result.accuracy}
+            </p>
+
+
+            <p>
+              Advice: {result.recommendation}
+            </p>
+
+
+
+          </div>
+
+          }
+
+
+
         </div>
-      )}
+
+
+      </div>
+
+
     </div>
+
+
+    </>
+
   );
+
 }
+
 
 export default DiseasePrediction;
