@@ -1,9 +1,9 @@
-function PatientCard() {
+function PredictionCard() {
   return (
     <div>
-      <h2>PatientCard</h2>
+      <h2>PredictionCard</h2>
     </div>
   );
 }
 
-export default PatientCard;
+export default PredictionCard;
