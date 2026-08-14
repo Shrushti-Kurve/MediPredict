@@ -72,18 +72,24 @@ const DoctorDashboard = () => {
       <Sidebar isOpen={sidebarOpen} toggleSidebar={setSidebarOpen} />
       
       <div className="dashboard-main">
-        <DashboardHeader title="Doctor Clinical Workspace" toggleSidebar={setSidebarOpen} />
+        <DashboardHeader title="" toggleSidebar={setSidebarOpen} />
         
         <main className="dashboard-content">
-          <section className="doctor-hero-banner">
-            <div className="doctor-hero-copy">
-              <span className="doctor-hero-kicker">Clinical Command Center</span>
-              <h2>Welcome back, Dr. {user?.name || 'Doctor'}</h2>
-              <p>Review patient activity, prescriptions, alerts, and stock visibility from one calm, high-contrast workspace.</p>
+          <section className="doctor-welcome-panel">
+            <div>
+              <span className="doctor-welcome-kicker">Doctor Workspace</span>
+              <h2>Welcome, Dr. {user?.name || 'Doctor'}</h2>
+              <p>Quick access to patients, alerts, medicine stock, and analytics.</p>
             </div>
-            <div className="doctor-hero-actions">
-              <Link to="/doctor/patients" className="doctor-hero-link">Open Patients</Link>
-              <Link to="/doctor/medicine-stock" className="doctor-hero-link doctor-hero-link-secondary">Medicine Stock</Link>
+            <div className="doctor-welcome-mini-cards">
+              <div className="doctor-mini-card">
+                <span>Patients</span>
+                <strong>{stats.totalPatients}</strong>
+              </div>
+              <div className="doctor-mini-card doctor-mini-card-accent">
+                <span>Alerts</span>
+                <strong>{stats.alertsCount}</strong>
+              </div>
             </div>
           </section>
 

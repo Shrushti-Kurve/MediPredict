@@ -40,7 +40,7 @@ const DashboardHeader = ({ title, toggleSidebar }) => {
 
         <div className="db-header-title-stack">
           <span className="db-header-welcome">Welcome, {displayName}</span>
-          <h1 className="db-header-title">{title}</h1>
+          {title ? <h1 className="db-header-title">{title}</h1> : null}
         </div>
       </div>
       
