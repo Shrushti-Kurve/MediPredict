@@ -1,0 +1,153 @@
+.stock-controls-bar {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.search-bar-wrapper {
+  position: relative;
+  max-width: 450px;
+  width: 100%;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+}
+
+.search-input {
+  padding-left: 2.5rem;
+  background-color: var(--surface);
+  height: 42px;
+}
+
+.add-medicine-btn {
+  height: 42px;
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+}
+
+/* Action Buttons */
+.table-action-btns {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: var(--transition-fast);
+  cursor: pointer;
+  border: none;
+}
+
+.btn-view {
+  background-color: var(--secondary-light);
+  color: var(--secondary);
+}
+
+.btn-view:hover {
+  background-color: var(--secondary);
+  color: var(--surface);
+}
+
+.btn-edit {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.btn-edit:hover {
+  background-color: var(--primary);
+  color: var(--surface);
+}
+
+.btn-qty {
+  background-color: var(--warning-light);
+  color: var(--warning);
+}
+
+.btn-qty:hover {
+  background-color: var(--warning);
+  color: var(--surface);
+}
+
+.text-center {
+  text-align: center !important;
+}
+
+/* Detail View Layout in Modal */
+.patient-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.detail-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.detail-val {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.highlight-val {
+  color: var(--primary-dark);
+  background-color: var(--primary-light);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--primary);
+  margin-top: 0.15rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .stock-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .add-medicine-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .patient-details-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .table-action-btns {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  
+  .btn-action {
+    width: 100%;
+    justify-content: center;
+  }
+}
