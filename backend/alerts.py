@@ -1,12 +1,62 @@
-import pandas as pd
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from sqlalchemy import text
 
-from config import STOCK_ALERT_PATH
+from database import get_db
+
+router = APIRouter(
+    prefix="/alerts",
+    tags=["Alerts"]
+)
 
 
-def get_alerts():
+# =========================================================
+# GET ALL ACTIVE ALERTS
+# =========================================================
 
-    alerts = pd.read_csv(STOCK_ALERT_PATH)
+@router.get("/")
+def get_alerts(
+    db: Session = Depends(get_db)
+):
+    query = text("""
+        SELECT
+            Alert_ID,
+            Medicine_ID,
+            Disease,
+            Village,
+            Alert_Type,
+            Severity,
+            Alert_Category,
+            Alert_Message,
+            Alert_Date,
+            Status
+        FROM alerts
+        ORDER BY Alert_Date DESC
+    """)
 
-    return alerts.to_dict(
-        orient="records"
-    )
+    result = db.execute(query).mappings().all()
+
+    return [dict(row) for row in result]
+
+
+# =========================================================
+# GET UNREAD/ACTIVE ALERT COUNT
+# Used later for notification bell
+# =========================================================
+
+@router.get("/count")
+def alert_count(
+    db: Session = Depends(get_db)
+):
+
+    query = text("""
+        SELECT COUNT(*) AS count
+        FROM alerts
+        WHERE Status = 'Active'
+    """)
+
+    result = db.execute(query).mappings().first()
+
+    return {
+        "count": result["count"]
+    }

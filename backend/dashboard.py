@@ -1,5 +1,5 @@
 from predict import predict_outbreak
-from medicine import get_medicine_requirement
+from medicines import get_medicine_requirement
 from alerts import get_alerts
 
 
