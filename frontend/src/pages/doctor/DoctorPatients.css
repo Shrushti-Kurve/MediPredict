@@ -1,0 +1,427 @@
+.doctor-patients-controls {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.search-bar-wrapper {
+  position: relative;
+  max-width: 450px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  color: var(--text-secondary);
+}
+
+.search-input {
+  padding-left: 2.5rem;
+  background-color: var(--surface);
+}
+
+/* Action Buttons inside Table */
+.table-action-btns {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: var(--transition-fast);
+  cursor: pointer;
+  border: none;
+}
+
+.btn-view {
+  background-color: var(--secondary-light);
+  color: var(--secondary);
+}
+
+.btn-view:hover {
+  background-color: var(--secondary);
+  color: var(--surface);
+}
+
+.btn-edit {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.btn-edit:hover {
+  background-color: var(--primary);
+  color: var(--surface);
+}
+
+.text-center {
+  text-align: center !important;
+}
+
+/* Patient View Modal Grid Layout */
+.patient-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.detail-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-field.full-row {
+  grid-column: span 2;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.detail-val {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.highlight-val {
+  color: var(--primary-dark);
+  background-color: var(--primary-light);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--primary);
+  margin-top: 0.15rem;
+}
+
+/* Edit Modal Segment Dividers */
+.read-only-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.editable-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.editable-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+/* Doctor Patients Custom Cell Styling */
+.disease-highlight {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #1e293b;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.doc-prescriptions-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-meds-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-med-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ccfbf1;
+  color: #0f766e;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm, 4px);
+  font-size: 0.75rem;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.doc-med-names-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 260px;
+}
+
+.med-tag-pill {
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm, 4px);
+  white-space: nowrap;
+}
+
+/* Prescription Slip View Modal */
+.doc-rx-modal {
+  max-width: 740px;
+}
+
+.rx-slip-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.rx-slip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--primary);
+  padding-bottom: 0.85rem;
+}
+
+.rx-doctor-info h4 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.rx-doctor-info span {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.rx-symbol {
+  font-family: serif;
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.rx-patient-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem 1rem;
+  background: #f8fafc;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid #e2e8f0;
+  font-size: 0.85rem;
+}
+
+.rx-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rx-medicines-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.rx-medicines-table th {
+  background: #f1f5f9;
+  padding: 0.65rem 0.85rem;
+  font-weight: 700;
+  color: #334155;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+}
+
+.rx-medicines-table td {
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.rx-notes-section {
+  background: #f8fafc;
+  border-left: 3px solid var(--primary);
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.rx-notes-section p {
+  margin: 0.25rem 0 0 0;
+  color: #475569;
+}
+
+/* Multi-Medicine Prescription Builder Modal */
+.rx-builder-section {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+
+.rx-builder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.rx-builder-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.rx-med-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rx-med-card {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.rx-med-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.rx-med-number {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.btn-delete-med {
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-delete-med:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.rx-med-card-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.5fr 1fr 0.8fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.rx-med-card-grid .med-name-field {
+  grid-column: span 1;
+}
+
+.rx-med-card-grid .med-inst-field {
+  grid-column: 1 / -1;
+}
+
+.rx-builder-footer {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+  .rx-med-card-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .rx-med-card-grid .med-name-field {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .rx-med-card-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .patient-details-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .detail-field.full-row {
+    grid-column: span 1;
+  }
+  
+  .table-action-btns {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  
+  .btn-action {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
