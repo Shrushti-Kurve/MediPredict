@@ -19,6 +19,72 @@
   width: 100%;
 }
 
+.doctor-hero-banner {
+  margin-bottom: 1.5rem;
+  padding: 1.5rem 1.75rem;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.95), rgba(37, 99, 235, 0.9));
+  color: #ffffff;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.doctor-hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.doctor-hero-kicker {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #fde68a;
+}
+
+.doctor-hero-banner h2 {
+  font-size: 1.55rem;
+  font-weight: 800;
+}
+
+.doctor-hero-banner p {
+  max-width: 760px;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.doctor-hero-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.doctor-hero-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem 1.1rem;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  transition: var(--transition-fast);
+}
+
+.doctor-hero-link:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.doctor-hero-link-secondary {
+  background: rgba(253, 230, 138, 0.18);
+}
+
 /* Dashboard View Tabs */
 .dashboard-view-tabs {
   display: flex;
@@ -296,6 +362,12 @@
 @media (max-width: 768px) {
   .dashboard-content {
     padding: 1.5rem;
+  }
+
+  .doctor-hero-banner {
+    padding: 1.25rem;
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 

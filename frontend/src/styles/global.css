@@ -7,9 +7,16 @@
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: var(--font-sans);
-  background-color: var(--background);
+  background:
+    radial-gradient(circle at top left, rgba(45, 212, 191, 0.14), transparent 30%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 28%),
+    linear-gradient(180deg, #f8fafc 0%, #eff6ff 100%);
   color: var(--text-primary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -235,6 +242,7 @@ input, select, textarea {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background-color: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .table {
@@ -244,7 +252,7 @@ input, select, textarea {
 }
 
 .table th {
-  background-color: #f8fafc;
+  background: linear-gradient(135deg, #f8fafc, #ecfeff);
   color: var(--text-secondary);
   font-size: 0.75rem;
   font-weight: 600;
@@ -266,7 +274,7 @@ input, select, textarea {
 }
 
 .table tr:hover td {
-  background-color: #f8fafc;
+  background-color: #f0fdfa;
 }
 
 /* Alerts and status states */

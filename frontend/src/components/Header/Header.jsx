@@ -37,9 +37,10 @@ const Header = () => {
 
         {/* Desktop Menu */}
         <nav className="desktop-nav">
-          <NavLink to="/" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Home</NavLink>
-          <NavLink to="/about" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>About</NavLink>
-          <NavLink to="/contact" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Contact</NavLink>
+          <a href="#hero" className="nav-link">Home</a>
+          <a href="#usp" className="nav-link">USP</a>
+          <a href="#roles" className="nav-link">Roles</a>
+          <a href="#connect" className="nav-link">Connect</a>
         </nav>
 
         <div className="desktop-auth-buttons">
@@ -68,9 +69,10 @@ const Header = () => {
         {/* Mobile Drawer */}
         <div className={`mobile-drawer ${mobileMenuOpen ? 'open' : ''}`}>
           <nav className="mobile-nav">
-            <NavLink to="/" className={({ isActive }) => isActive ? "mobile-nav-link active" : "mobile-nav-link"} onClick={() => setMobileMenuOpen(false)}>Home</NavLink>
-            <NavLink to="/about" className={({ isActive }) => isActive ? "mobile-nav-link active" : "mobile-nav-link"} onClick={() => setMobileMenuOpen(false)}>About</NavLink>
-            <NavLink to="/contact" className={({ isActive }) => isActive ? "mobile-nav-link active" : "mobile-nav-link"} onClick={() => setMobileMenuOpen(false)}>Contact</NavLink>
+            <a href="#hero" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>Home</a>
+            <a href="#usp" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>USP</a>
+            <a href="#roles" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>Roles</a>
+            <a href="#connect" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>Connect</a>
             
             <div className="mobile-auth-section">
               {user ? (

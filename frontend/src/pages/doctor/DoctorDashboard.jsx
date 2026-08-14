@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
 import PowerBIEmbed from '../../components/PowerBIEmbed/PowerBIEmbed';
-import { getPatients, getAlerts } from '../../services/localStorageService';
+import { getPatients, getAlerts, getLoggedInUser } from '../../services/localStorageService';
 import { 
   FaUserInjured, 
   FaCalendarDay, 
@@ -18,6 +18,7 @@ import './DoctorDashboard.css';
 const DoctorDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeViewTab, setActiveViewTab] = useState('overview'); // 'overview' | 'powerbi'
+  const user = getLoggedInUser();
   const [stats, setStats] = useState({
     totalPatients: 0,
     todaysPatients: 0,
@@ -74,6 +75,18 @@ const DoctorDashboard = () => {
         <DashboardHeader title="Doctor Clinical Workspace" toggleSidebar={setSidebarOpen} />
         
         <main className="dashboard-content">
+          <section className="doctor-hero-banner">
+            <div className="doctor-hero-copy">
+              <span className="doctor-hero-kicker">Clinical Command Center</span>
+              <h2>Welcome back, Dr. {user?.name || 'Doctor'}</h2>
+              <p>Review patient activity, prescriptions, alerts, and stock visibility from one calm, high-contrast workspace.</p>
+            </div>
+            <div className="doctor-hero-actions">
+              <Link to="/doctor/patients" className="doctor-hero-link">Open Patients</Link>
+              <Link to="/doctor/medicine-stock" className="doctor-hero-link doctor-hero-link-secondary">Medicine Stock</Link>
+            </div>
+          </section>
+
           {/* Main Dashboard Navigation Tabs */}
           <div className="dashboard-view-tabs">
             <button 

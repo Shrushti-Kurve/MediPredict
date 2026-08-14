@@ -7,8 +7,6 @@ import './styles/global.css';
 
 // Public Pages
 import Home from './pages/Home/Home';
-import About from './pages/About/About';
-import Contact from './pages/Contact/Contact';
 import Login from './pages/Login/Login';
 import Signup from './pages/Signup/Signup';
 
@@ -19,6 +17,7 @@ import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
 import DoctorPatients from './pages/doctor/DoctorPatients';
 import DoctorAlerts from './pages/doctor/DoctorAlerts';
+import DoctorMedicineStock from './pages/doctor/DoctorMedicineStock';
 
 // Hospital Staff Pages
 import HospitalDashboard from './pages/hospitalStaff/HospitalDashboard';
@@ -44,8 +43,8 @@ function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/contact" element={<Contact />} />
+        <Route path="/about" element={<Navigate to="/" replace />} />
+        <Route path="/contact" element={<Navigate to="/" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 
@@ -71,6 +70,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['doctor']}>
               <DoctorAlerts />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/doctor/medicine-stock" 
+          element={
+            <ProtectedRoute allowedRoles={['doctor']}>
+              <DoctorMedicineStock />
             </ProtectedRoute>
           } 
         />
