@@ -3,11 +3,11 @@ import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
 import { FaSearch, FaBell, FaExclamationTriangle, FaInfoCircle, FaPlusCircle } from 'react-icons/fa';
 import './DoctorAlerts.css';
-import { getRoleAlerts } from "../../services/api/alertService";
+import { getRoleAlerts } from '../../services/api/alertService';
 
 const DoctorAlerts = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [alerts, setAlerts] = useState([]);
 
   useEffect(() => {
@@ -23,29 +23,34 @@ const DoctorAlerts = () => {
     loadAlerts();
   }, []);
 
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
-  const filteredAlerts = alerts.filter(alert =>
-    `${alert.title} ${alert.description} ${alert.severity}`.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAlerts = alerts.filter((alert) => {
+    const searchableText = `${alert.title || ''} ${alert.description || ''} ${alert.severity || ''}`.toLowerCase();
+    return searchableText.includes(searchQuery.toLowerCase());
+  });
 
   const getAlertIcon = (severity) => {
     switch (severity) {
-      case 'Critical': return <FaPlusCircle className="alert-icon critical" />;
-      case 'Warning': return <FaExclamationTriangle className="alert-icon warning" />;
-      case 'Info': return <FaInfoCircle className="alert-icon medicine" />;
-      default: return <FaBell className="alert-icon info" />;
+      case 'Critical':
+        return <FaPlusCircle className="alert-icon critical" />;
+      case 'Warning':
+        return <FaExclamationTriangle className="alert-icon warning" />;
+      case 'Info':
+        return <FaInfoCircle className="alert-icon medicine" />;
+      default:
+        return <FaBell className="alert-icon info" />;
     }
   };
 
   const getAlertBadgeClass = (severity) => {
     switch (severity) {
-      case 'Critical': return 'badge badge-danger';
-      case 'Warning': return 'badge badge-warning';
-      case 'Info': return 'badge badge-success';
-      default: return 'badge badge-primary';
+      case 'Critical':
+        return 'badge badge-danger';
+      case 'Warning':
+        return 'badge badge-warning';
+      case 'Info':
+        return 'badge badge-success';
+      default:
+        return 'badge badge-primary';
     }
   };
 
@@ -57,50 +62,31 @@ const DoctorAlerts = () => {
   };
 
   return (
-
     <div className="dashboard-layout">
-
-      <Sidebar
-        isOpen={sidebarOpen}
-        toggleSidebar={setSidebarOpen}
-      />
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={setSidebarOpen} />
 
       <div className="dashboard-main">
-
-        <DashboardHeader
-          title="System & Patient Alerts"
-          toggleSidebar={setSidebarOpen}
-        />
+        <DashboardHeader title="System & Patient Alerts" toggleSidebar={setSidebarOpen} />
 
         <main className="dashboard-content">
-
-          {/* SEARCH */}
-
           <div className="alerts-page-controls">
-
             <div className="search-bar-wrapper">
-
               <FaSearch className="search-icon" />
-
               <input
                 type="text"
                 placeholder="Search disease, village or medicine..."
                 className="form-control search-input"
                 value={searchQuery}
-                onChange={(e) =>
-                  setSearchQuery(e.target.value)
-                }
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-
             </div>
-
           </div>
 
           <div className="alerts-full-container">
             {filteredAlerts.length > 0 ? (
               <div className="alerts-detailed-list">
-                {filteredAlerts.map(alert => (
-                  <div key={alert.id} className={`alert-detail-card alert-border-${alert.severity.toLowerCase()}`}>
+                {filteredAlerts.map((alert) => (
+                  <div key={alert.id} className={`alert-detail-card alert-border-${(alert.severity || 'info').toLowerCase()}`}>
                     <div className="alert-card-left">
                       {getAlertIcon(alert.severity)}
                       <div className="alert-card-content">
@@ -111,107 +97,23 @@ const DoctorAlerts = () => {
                     </div>
                     <div className="alert-card-right">
                       <span className={getAlertBadgeClass(alert.severity)}>
-                        {alert.severity}
+                        {alert.severity || 'Info'}
                       </span>
                     </div>
                   </div>
                 ))}
               </div>
-
-              <DiseaseSeveritySection
-                title="High"
-                icon={<FaPlusCircle />}
-                alerts={highDisease}
-                className="severity-high"
-              />
-
-              <DiseaseSeveritySection
-                title="Medium"
-                icon={<FaExclamationTriangle />}
-                alerts={mediumDisease}
-                className="severity-medium"
-              />
-
-              <DiseaseSeveritySection
-                title="Low"
-                icon={<FaInfoCircle />}
-                alerts={lowDisease}
-                className="severity-low"
-              />
-
-            </section>
-
-
-            {/* =================================================
-                MEDICINE
-            ================================================= */}
-
-            <section className="alerts-panel medicine-panel">
-
-              <div className="panel-heading">
-
-                <div>
-
-                  <h2>
-                    Medicine Alerts
-                  </h2>
-
-                  <p>
-                    Pharmacy stock monitoring
-                  </p>
-
-                </div>
-
-                <FaCapsules />
-
+            ) : (
+              <div className="alerts-empty-state">
+                <FaBell className="empty-bell" />
+                <h3>No new alerts.</h3>
+                <p>Everything is currently running smoothly.</p>
               </div>
-
-              {filteredMedicineAlerts.length > 0 ? (
-
-                <div className="medicine-alert-list">
-
-                  {filteredMedicineAlerts.map(
-                    (alert, index) => (
-
-                      <MedicineCard
-                        key={
-                          alert.Alert_ID ||
-                          alert.alert_id ||
-                          alert.id ||
-                          index
-                        }
-                        alert={alert}
-                      />
-
-                    )
-                  )}
-
-                </div>
-
-              ) : (
-
-                <div className="medicine-empty">
-
-                  <FaBell />
-
-                  <p>
-                    No medicine alerts
-                  </p>
-
-                </div>
-
-              )}
-
-            </section>
-
+            )}
           </div>
-
         </main>
-
       </div>
-
     </div>
-
   );
 };
 
