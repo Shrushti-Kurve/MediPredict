@@ -32,11 +32,20 @@ const apiClient = async (endpoint, options = {}) => {
     }
 
     if (!response.ok) {
-      throw new Error(
-        data?.detail ||
-        data?.message ||
-        `Request failed with status ${response.status}`
-      );
+      let errorMessage =
+  `Request failed with status ${response.status}`;
+
+if (typeof data?.detail === "string") {
+  errorMessage = data.detail;
+} else if (data?.detail) {
+  errorMessage = JSON.stringify(data.detail);
+} else if (typeof data?.message === "string") {
+  errorMessage = data.message;
+} else if (data?.message) {
+  errorMessage = JSON.stringify(data.message);
+}
+
+throw new Error(errorMessage);
     }
 
     return data;

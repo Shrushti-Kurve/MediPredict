@@ -5,6 +5,11 @@ import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
 import PowerBIEmbed from '../../components/PowerBIEmbed/PowerBIEmbed';
 import { getLoggedInUser } from '../../services/localStorageService';
 import { getPatients as apiGetPatients } from '../../services/api/patientService';
+import {
+  getAlerts,
+  generateAlerts
+} from "../../services/api/alertService";
+
 import { getAlerts as apiGetAlerts } from '../../services/api/alertService';
 import { 
   FaUserInjured, 
@@ -18,6 +23,27 @@ import {
 import './DoctorDashboard.css';
 
 const DoctorDashboard = () => {
+  const [alerts, setAlerts] = useState([]);
+const [alertsLoading, setAlertsLoading] = useState(true);
+
+const loadAlerts = async () => {
+  try {
+    setAlertsLoading(true);
+
+    const data = await getAlerts();
+
+    setAlerts(Array.isArray(data) ? data : []);
+
+  } catch (error) {
+    console.error("ALERT LOAD ERROR:", error);
+  } finally {
+    setAlertsLoading(false);
+  }
+};
+
+useEffect(() => {
+  loadAlerts();
+}, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeViewTab, setActiveViewTab] = useState('overview'); // 'overview' | 'powerbi'
   const user = getLoggedInUser();
@@ -90,6 +116,7 @@ const DoctorDashboard = () => {
   };
 
   return (
+    
     <div className="dashboard-layout">
       <Sidebar isOpen={sidebarOpen} toggleSidebar={setSidebarOpen} />
       
