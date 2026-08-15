@@ -55,6 +55,14 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               <span>Alerts</span>
             </NavLink>
             <NavLink 
+              to="/doctor/medicine-stock" 
+              className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+              onClick={() => toggleSidebar && toggleSidebar(false)}
+            >
+              <FaPills className="sidebar-icon" />
+              <span>Medicine Stock</span>
+            </NavLink>
+            <NavLink 
               to="/doctor/profile" 
               className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
               onClick={() => toggleSidebar && toggleSidebar(false)}

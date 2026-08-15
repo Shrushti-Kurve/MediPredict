@@ -3,159 +3,180 @@ import { Link } from 'react-router-dom';
 import Header from '../../components/Header/Header';
 import Footer from '../../components/Footer/Footer';
 import logo from '../../assets/logo/logo.png';
-import { 
-  FaUserInjured, 
-  FaUserMd, 
-  FaPills, 
-  FaExclamationTriangle, 
-  FaHospitalSymbol, 
-  FaGlobeAsia,
-  FaUserPlus,
-  FaSignInAlt,
-  FaFolderOpen,
-  FaDesktop
+import {
+  FaBell,
+  FaChartLine,
+  FaCapsules,
+  FaUserInjured,
+  FaStethoscope,
+  FaShieldAlt,
+  FaArrowRight,
+  FaPhoneAlt,
+  FaEnvelope
 } from 'react-icons/fa';
 import './Home.css';
+
+const uspCards = [
+  {
+    icon: FaBell,
+    title: 'Instant Alerts',
+    text: 'Low-stock, critical, and follow-up alerts stay visible before issues build up.',
+  },
+  {
+    icon: FaChartLine,
+    title: 'Disease Forecasting',
+    text: 'Spot patterns early and plan care around likely demand, not guesswork.',
+  },
+  {
+    icon: FaCapsules,
+    title: 'Medicine Stock',
+    text: 'See inventory health, expiry windows, and medicine availability in one place.',
+  },
+  {
+    icon: FaUserInjured,
+    title: 'Patient Flow',
+    text: 'Keep patient records, visits, and treatment history organized and easy to scan.',
+  },
+  {
+    icon: FaStethoscope,
+    title: 'Doctor Workspace',
+    text: 'Doctors get a focused workspace for patients, prescriptions, and clinical review.',
+  },
+  {
+    icon: FaShieldAlt,
+    title: 'Role-Based Access',
+    text: 'Each user sees only the tools they need, which keeps the workflow simple and safe.',
+  },
+];
+
+const roleCards = [
+  {
+    title: 'Doctor',
+    text: 'Review patients, prescriptions, alerts, and medicine stock in a clean clinical space.',
+  },
+  {
+    title: 'Hospital Staff',
+    text: 'Manage patient records and admissions without touching medicine editing tools.',
+  },
+  {
+    title: 'Pharmacist',
+    text: 'Handle stock updates, expiry checks, and inventory changes from one dashboard.',
+  },
+];
 
 const Home = () => {
   return (
     <div className="home-page-wrapper">
       <Header />
 
-      {/* Hero Section */}
-      <section className="hero-section">
+      <section className="hero-section" id="hero">
+        <div className="hero-glow hero-glow-left" />
+        <div className="hero-glow hero-glow-right" />
         <div className="container hero-container">
           <div className="hero-logo-wrapper">
-            <img src={logo} alt="MediPredict Hospital Logo" className="hero-logo" />
+            <img src={logo} alt="MediPredict Logo" className="hero-logo" />
           </div>
-          <h1 className="hero-title">Smarter Healthcare for Rural Communities</h1>
+          <div className="hero-badge">Rural Healthcare System</div>
+          <h1 className="hero-title">A calmer way to manage rural care</h1>
           <p className="hero-subtitle">
-            MediPredict helps healthcare teams manage patients, medicines, and hospital operations efficiently.
+            MediPredict brings alerts, disease forecasting, medicine stock, and patient workspaces together in one place.
           </p>
           <div className="hero-buttons">
             <Link to="/signup" className="btn btn-primary hero-btn-get-started">Get Started</Link>
-            <Link to="/about" className="btn btn-secondary hero-btn-learn-more">Learn More</Link>
+            <a href="#usp" className="btn btn-secondary hero-btn-learn-more">Explore Features</a>
           </div>
         </div>
       </section>
 
-      {/* Healthcare Features Grid */}
-      <section className="features-section">
+      <section className="usp-section" id="usp">
         <div className="container">
           <div className="section-header-block">
-            <h2 className="section-title">Healthcare Features</h2>
-            <p className="section-desc">Designed to address the specific challenges of rural clinical workflows.</p>
+            <span className="section-kicker">Core USP</span>
+            <h2 className="section-title">What makes MediPredict useful</h2>
+            <p className="section-desc">A focused set of tools built around the realities of rural healthcare teams.</p>
           </div>
-          
-          <div className="features-grid">
-            <div className="feature-card">
-              <div className="feature-icon-wrapper"><FaUserInjured /></div>
-              <h3>Patient Management</h3>
-              <p>Efficiently manage and maintain patient information.</p>
-            </div>
-            
-            <div className="feature-card">
-              <div className="feature-icon-wrapper"><FaUserMd /></div>
-              <h3>Doctor Management</h3>
-              <p>Allow doctors to manage patient diseases and prescriptions.</p>
-            </div>
-            
-            <div className="feature-card">
-              <div className="feature-icon-wrapper"><FaPills /></div>
-              <h3>Medicine Management</h3>
-              <p>Track medicine quantities and availability.</p>
-            </div>
-            
-            <div className="feature-card">
-              <div className="feature-icon-wrapper"><FaExclamationTriangle /></div>
-              <h3>Medicine Alerts</h3>
-              <p>Identify medicines that are low in stock or unavailable.</p>
-            </div>
-            
-            <div className="feature-card">
-              <div className="feature-icon-wrapper"><FaHospitalSymbol /></div>
-              <h3>Hospital Operations</h3>
-              <p>Help hospital staff maintain organized patient records.</p>
-            </div>
-            
-            <div className="feature-card">
-              <div className="feature-icon-wrapper"><FaGlobeAsia /></div>
-              <h3>Rural Healthcare</h3>
-              <p>Support better healthcare management for rural communities.</p>
-            </div>
+
+          <div className="usp-grid">
+            {uspCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <article key={card.title} className="usp-card">
+                  <div className="usp-icon-wrap">
+                    <Icon />
+                  </div>
+                  <h3>{card.title}</h3>
+                  <p>{card.text}</p>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* How MediPredict Works */}
-      <section className="how-it-works-section">
+      <section className="workflow-section">
         <div className="container">
-          <div className="section-header-block">
-            <h2 className="section-title text-white">How MediPredict Works</h2>
-            <p className="section-desc text-white">Follow a structured workflow to streamline clinical services.</p>
+          <div className="section-header-block light">
+            <span className="section-kicker light">Simple flow</span>
+            <h2 className="section-title text-white">How people use it</h2>
+            <p className="section-desc text-white">Short steps, clear roles, and no extra page hopping.</p>
           </div>
-          
-          <div className="steps-container">
-            <div className="step-card">
-              <div className="step-number">01</div>
-              <div className="step-icon"><FaUserPlus /></div>
-              <h4>Create Account</h4>
-              <p>Register as a Doctor, Hospital Staff member, or Pharmacist.</p>
+
+          <div className="workflow-grid">
+            <div className="workflow-card">
+              <div className="workflow-pill">01</div>
+              <h4>Create an account</h4>
+              <p>Register as doctor, staff, or pharmacist depending on the role.</p>
             </div>
-            
-            <div className="step-card">
-              <div className="step-number">02</div>
-              <div className="step-icon"><FaSignInAlt /></div>
-              <h4>Login by Role</h4>
-              <p>Access your dedicated workspace immediately after login.</p>
+            <div className="workflow-card">
+              <div className="workflow-pill">02</div>
+              <h4>Sign in once</h4>
+              <p>Land in the right workspace automatically after login.</p>
             </div>
-            
-            <div className="step-card">
-              <div className="step-number">03</div>
-              <div className="step-icon"><FaFolderOpen /></div>
-              <h4>Manage Information</h4>
-              <p>Hospital staff manage patient records, and doctors prescribe medicine.</p>
+            <div className="workflow-card">
+              <div className="workflow-pill">03</div>
+              <h4>Work in one place</h4>
+              <p>Use the sidebar after sign-in to keep navigation fast and focused.</p>
             </div>
-            
-            <div className="step-card">
-              <div className="step-number">04</div>
-              <div className="step-icon"><FaDesktop /></div>
-              <h4>Monitor Actions</h4>
-              <p>Pharmacists track medication stocks, triggering auto-alerts.</p>
+            <div className="workflow-card">
+              <div className="workflow-pill">04</div>
+              <h4>Stay alerted</h4>
+              <p>Watch stock, disease, and patient signals without digging through multiple screens.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Role Access Section */}
-      <section className="roles-section">
+      <section className="roles-section" id="roles">
         <div className="container">
           <div className="section-header-block">
-            <h2 className="section-title">Healthcare Workspaces</h2>
-            <p className="section-desc">We support three primary user roles to coordinate rural medical service delivery.</p>
+            <span className="section-kicker">Access by role</span>
+            <h2 className="section-title">Each user sees the right tools</h2>
+            <p className="section-desc">No clutter, no unnecessary edit rights, and no confusing switches.</p>
           </div>
-          
+
           <div className="roles-grid">
-            <div className="role-card-display">
-              <div className="role-icon-wrapper"><FaUserMd /></div>
-              <h3>Doctor</h3>
-              <p>Manage patient medical information, diseases, and medicines.</p>
-              <Link to="/login" className="role-action-link">Access Workspace &rarr;</Link>
-            </div>
-            
-            <div className="role-card-display">
-              <div className="role-icon-wrapper"><FaHospitalSymbol /></div>
-              <h3>Hospital Staff</h3>
-              <p>Manage complete patient records and hospital information.</p>
-              <Link to="/login" className="role-action-link">Access Workspace &rarr;</Link>
-            </div>
-            
-            <div className="role-card-display">
-              <div className="role-icon-wrapper"><FaPills /></div>
-              <h3>Pharmacist</h3>
-              <p>Manage medicine inventory and medicine stock alerts.</p>
-              <Link to="/login" className="role-action-link">Access Workspace &rarr;</Link>
-            </div>
+            {roleCards.map((role) => (
+              <article key={role.title} className="role-card-display">
+                <div className="role-card-glow" />
+                <h3>{role.title}</h3>
+                <p>{role.text}</p>
+                <Link to="/login" className="role-action-link">Open workspace <FaArrowRight /></Link>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="connect-section" id="connect">
+        <div className="container connect-panel">
+          <div>
+            <span className="section-kicker">Need help</span>
+            <h2 className="section-title">Connect with the team directly</h2>
+            <p className="section-desc">You can keep this on the home page instead of sending people to a separate contact screen.</p>
+          </div>
+          <div className="connect-actions">
+            <a className="connect-chip" href="tel:+919876543210"><FaPhoneAlt /> +91 98765-43210</a>
+            <a className="connect-chip" href="mailto:support@medipredict.org"><FaEnvelope /> support@medipredict.org</a>
           </div>
         </div>
       </section>

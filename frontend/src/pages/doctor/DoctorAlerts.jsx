@@ -1,20 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
-import { getAlerts } from '../../services/localStorageService';
 import { FaSearch, FaBell, FaExclamationTriangle, FaInfoCircle, FaPlusCircle } from 'react-icons/fa';
 import './DoctorAlerts.css';
+import { getAlerts } from "../../services/api/alertService";
 
 const DoctorAlerts = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [alerts, setAlerts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [alerts, setAlerts] = useState([]);
 
   useEffect(() => {
-    // Filter alerts for doctor role
-    const allAlerts = getAlerts();
-    setAlerts(allAlerts.filter(a => a.role === 'doctor'));
+    loadAlerts();
   }, []);
+
+  const loadAlerts = async () => {
+    try {
+      const data = await getAlerts();
+      setAlerts(data.filter(a => a.role === 'doctor'));
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);

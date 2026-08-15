@@ -6,6 +6,9 @@ from database import get_db
 from models import Patient
 from schemas import PatientCreate, PatientUpdate
 
+# Automatic prediction function
+from predict import run_automatic_prediction
+
 
 router = APIRouter(
     prefix="/patients",
@@ -60,6 +63,16 @@ def add_patient(
     db.commit()
 
     db.refresh(patient)
+    # Try to run automatic prediction but do not fail patient creation on errors
+    prediction_result = None
+
+    try:
+        prediction_result = run_automatic_prediction()
+    except Exception as e:
+        prediction_result = {
+            "status": "prediction_error",
+            "message": str(e)
+        }
 
     return {
 
@@ -69,7 +82,9 @@ def add_patient(
 
         "Patient_ID": patient.Patient_ID,
 
-        "Patient_Name": patient.Patient_Name
+        "Patient_Name": patient.Patient_Name,
+
+        "automatic_prediction": prediction_result
 
     }
 
@@ -136,25 +151,88 @@ def update_patient(
             detail="Patient not found"
         )
 
+
+    # -----------------------------------------------------
+    # UPDATE DISEASE
+    # -----------------------------------------------------
+
     if data.Disease is not None:
 
         patient.Disease = data.Disease
+
+
+    # -----------------------------------------------------
+    # UPDATE SYMPTOMS
+    # -----------------------------------------------------
 
     if data.Symptoms is not None:
 
         patient.Symptoms = data.Symptoms
 
+
+    # -----------------------------------------------------
+    # UPDATE DOCTOR
+    # -----------------------------------------------------
+
     if data.Doctor is not None:
 
         patient.Doctor = data.Doctor
+
+
+    # -----------------------------------------------------
+    # UPDATE DOCTOR USER ID
+    # -----------------------------------------------------
 
     if data.Doctor_User_ID is not None:
 
         patient.Doctor_User_ID = data.Doctor_User_ID
 
+
+    # Save doctor changes
     db.commit()
 
     db.refresh(patient)
+
+
+    # =====================================================
+    # AUTOMATIC PREDICTION TRIGGER
+    # =====================================================
+    #
+    # The doctor does NOT click Predict.
+    #
+    # After the patient is updated, the backend checks:
+    #
+    #       diagnosed patients >= PATIENT_TRIGGER
+    #
+    # If yes → prediction automatically runs.
+    #
+    # Currently PATIENT_TRIGGER = 2 for your hackathon test.
+    # Later change it to 100 in predict.py.
+    # =====================================================
+
+    prediction_result = None
+
+    try:
+
+        prediction_result = run_automatic_prediction()
+
+    except Exception as e:
+
+        # Patient update should NOT fail just because
+        # prediction has an error.
+
+        prediction_result = {
+
+            "status": "prediction_error",
+
+            "message": str(e)
+
+        }
+
+
+    # =====================================================
+    # RESPONSE
+    # =====================================================
 
     return {
 
@@ -176,6 +254,8 @@ def update_patient(
 
             "Doctor_User_ID": patient.Doctor_User_ID
 
-        }
+        },
+
+        "automatic_prediction": prediction_result
 
     }

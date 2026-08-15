@@ -6,13 +6,16 @@ from typing import Optional
 # ML PREDICTION
 # =========================================================
 
-class PredictionRequest(BaseModel):
+from pydantic import BaseModel
+from typing import Optional
 
-    Village: str
-    Disease: str
-    Season: str
-    Year: int
-    Month: int
+
+class PredictionRequest(BaseModel):
+    Village: Optional[str] = None
+    Disease: Optional[str] = None
+    Season: Optional[str] = None
+    Year: Optional[int] = None
+    Month: Optional[int] = None
 
 
 # =========================================================

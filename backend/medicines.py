@@ -1,11 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime, date
-
+from sqlalchemy import text
 from database import get_db
-from models import Medicine
-from schemas import MedicineCreate, MedicineStockUpdate
-
 
 router = APIRouter(
     prefix="/medicines",
@@ -14,189 +10,29 @@ router = APIRouter(
 
 
 # =========================================================
-# STOCK STATUS
-# =========================================================
-
-def calculate_stock_status(
-    current_stock: int,
-    reorder_level: int
-):
-
-    if current_stock <= 0:
-
-        return "OUT_OF_STOCK"
-
-    elif current_stock <= reorder_level:
-
-        return "LOW"
-
-    else:
-
-        return "AVAILABLE"
-
-
-# =========================================================
-# EXPIRY STATUS
-# =========================================================
-
-def check_expiry(expiry_date):
-
-    if expiry_date is None:
-
-        return "NO_EXPIRY_DATE"
-
-    today = date.today()
-
-    if expiry_date < today:
-
-        return "EXPIRED"
-
-    return "VALID"
-
-
-# =========================================================
-# OLD MEDICINE REQUIREMENT FUNCTION
-# Keeps your existing app.py working
-# =========================================================
-
-def get_medicine_requirement(disease: str):
-
-    return {
-
-        "disease": disease,
-
-        "message": "Medicine requirement endpoint connected",
-
-        "status": "success"
-
-    }
-
-
-# =========================================================
-# PHARMACIST → ADD MEDICINE
-# =========================================================
-
-@router.post("/")
-def add_medicine(
-    data: MedicineCreate,
-    db: Session = Depends(get_db)
-):
-
-    existing = db.query(Medicine).filter(
-        Medicine.Medicine_Name == data.Medicine_Name
-    ).first()
-
-    if existing:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Medicine already exists"
-        )
-
-    expiry = None
-
-    if data.Expiry_Date:
-
-        try:
-
-            expiry = datetime.strptime(
-                data.Expiry_Date,
-                "%Y-%m-%d"
-            ).date()
-
-        except ValueError:
-
-            raise HTTPException(
-                status_code=400,
-                detail="Expiry_Date must be YYYY-MM-DD"
-            )
-
-    stock_status = calculate_stock_status(
-        data.Current_Stock,
-        data.Reorder_Level
-    )
-
-    medicine = Medicine(
-
-        Medicine_Name=data.Medicine_Name,
-
-        Current_Stock=data.Current_Stock,
-
-        Reorder_Level=data.Reorder_Level,
-
-        Stock_Status=stock_status,
-
-        Expiry_Date=expiry,
-
-        Supplier=data.Supplier,
-
-        PHC_Name=data.PHC_Name
-
-    )
-
-    db.add(medicine)
-
-    db.commit()
-
-    db.refresh(medicine)
-
-    return {
-
-        "status": "success",
-
-        "message": "Medicine added successfully",
-
-        "Medicine_ID": medicine.Medicine_ID,
-
-        "Medicine_Name": medicine.Medicine_Name,
-
-        "Current_Stock": medicine.Current_Stock,
-
-        "Stock_Status": medicine.Stock_Status
-
-    }
-
-
-# =========================================================
-# VIEW ALL MEDICINES
+# GET ALL MEDICINES
 # =========================================================
 
 @router.get("/")
-def get_medicines(
-    db: Session = Depends(get_db)
-):
+def get_medicines(db: Session = Depends(get_db)):
 
-    medicines = db.query(Medicine).all()
+    result = db.execute(
+        text("""
+            SELECT
+                Medicine_ID,
+                Medicine_Name,
+                Current_Stock,
+                Reorder_Level,
+                Stock_Status,
+                Expiry_Date,
+                Supplier,
+                PHC_Name
+            FROM medicines
+            ORDER BY Medicine_Name
+        """)
+    )
 
-    result = []
-
-    for medicine in medicines:
-
-        result.append({
-
-            "Medicine_ID": medicine.Medicine_ID,
-
-            "Medicine_Name": medicine.Medicine_Name,
-
-            "Current_Stock": medicine.Current_Stock,
-
-            "Reorder_Level": medicine.Reorder_Level,
-
-            "Stock_Status": medicine.Stock_Status,
-
-            "Expiry_Date": medicine.Expiry_Date,
-
-            "Expiry_Status": check_expiry(
-                medicine.Expiry_Date
-            ),
-
-            "Supplier": medicine.Supplier,
-
-            "PHC_Name": medicine.PHC_Name
-
-        })
-
-    return result
+    return [dict(row._mapping) for row in result]
 
 
 # =========================================================
@@ -209,154 +45,290 @@ def get_medicine(
     db: Session = Depends(get_db)
 ):
 
-    medicine = db.query(Medicine).filter(
-        Medicine.Medicine_ID == medicine_id
-    ).first()
+    result = db.execute(
+        text("""
+            SELECT *
+            FROM medicines
+            WHERE Medicine_ID = :medicine_id
+        """),
+        {"medicine_id": medicine_id}
+    ).fetchone()
 
-    if not medicine:
-
+    if not result:
         raise HTTPException(
             status_code=404,
             detail="Medicine not found"
         )
 
-    return {
-
-        "Medicine_ID": medicine.Medicine_ID,
-
-        "Medicine_Name": medicine.Medicine_Name,
-
-        "Current_Stock": medicine.Current_Stock,
-
-        "Reorder_Level": medicine.Reorder_Level,
-
-        "Stock_Status": medicine.Stock_Status,
-
-        "Expiry_Date": medicine.Expiry_Date,
-
-        "Expiry_Status": check_expiry(
-            medicine.Expiry_Date
-        ),
-
-        "Supplier": medicine.Supplier,
-
-        "PHC_Name": medicine.PHC_Name
-
-    }
+    return dict(result._mapping)
 
 
 # =========================================================
-# PHARMACIST → ADD STOCK
+# ADD MEDICINE
 # =========================================================
 
-@router.put("/{medicine_id}/add-stock")
-def add_stock(
-    medicine_id: int,
-    data: MedicineStockUpdate,
+@router.post("/")
+def add_medicine(
+    data: dict,
     db: Session = Depends(get_db)
 ):
 
-    if data.quantity <= 0:
+    medicine_name = data.get("Medicine_Name")
+    current_stock = int(data.get("Current_Stock", 0))
+    reorder_level = int(data.get("Reorder_Level", 0))
+    expiry_date = data.get("Expiry_Date")
+    supplier = data.get("Supplier")
+    phc_name = data.get("PHC_Name")
 
+    if not medicine_name:
         raise HTTPException(
             status_code=400,
-            detail="Quantity must be greater than 0"
+            detail="Medicine_Name is required"
         )
 
-    medicine = db.query(Medicine).filter(
-        Medicine.Medicine_ID == medicine_id
-    ).first()
+    # -----------------------------------------------------
+    # CHECK IF MEDICINE ALREADY EXISTS
+    # -----------------------------------------------------
 
-    if not medicine:
+    existing = db.execute(
+        text("""
+            SELECT *
+            FROM medicines
+            WHERE Medicine_Name = :name
+        """),
+        {"name": medicine_name}
+    ).fetchone()
 
-        raise HTTPException(
-            status_code=404,
-            detail="Medicine not found"
+    # -----------------------------------------------------
+    # IF EXISTS → ADD STOCK
+    # -----------------------------------------------------
+
+    if existing:
+
+        new_stock = (
+            existing.Current_Stock or 0
+        ) + current_stock
+
+        if new_stock == 0:
+            stock_status = "OUT_OF_STOCK"
+
+        elif new_stock <= (
+            existing.Reorder_Level or reorder_level
+        ):
+            stock_status = "LOW_STOCK"
+
+        else:
+            stock_status = "AVAILABLE"
+
+        db.execute(
+            text("""
+                UPDATE medicines
+                SET
+                    Current_Stock = :stock,
+                    Stock_Status = :status
+                WHERE Medicine_ID = :id
+            """),
+            {
+                "stock": new_stock,
+                "status": stock_status,
+                "id": existing.Medicine_ID
+            }
         )
 
-    medicine.Current_Stock += data.quantity
+        db.commit()
 
-    medicine.Stock_Status = calculate_stock_status(
-        medicine.Current_Stock,
-        medicine.Reorder_Level
+        return {
+            "status": "success",
+            "message": "Medicine already existed. Stock updated.",
+            "Medicine_ID": existing.Medicine_ID,
+            "Medicine_Name": existing.Medicine_Name,
+            "Current_Stock": new_stock,
+            "Stock_Status": stock_status
+        }
+
+    # -----------------------------------------------------
+    # NEW MEDICINE
+    # -----------------------------------------------------
+
+    if current_stock <= 0:
+        stock_status = "OUT_OF_STOCK"
+
+    elif current_stock <= reorder_level:
+        stock_status = "LOW_STOCK"
+
+    else:
+        stock_status = "AVAILABLE"
+
+    result = db.execute(
+        text("""
+            INSERT INTO medicines
+            (
+                Medicine_Name,
+                Current_Stock,
+                Reorder_Level,
+                Stock_Status,
+                Expiry_Date,
+                Supplier,
+                PHC_Name
+            )
+            VALUES
+            (
+                :name,
+                :stock,
+                :reorder,
+                :status,
+                :expiry,
+                :supplier,
+                :phc
+            )
+        """),
+        {
+            "name": medicine_name,
+            "stock": current_stock,
+            "reorder": reorder_level,
+            "status": stock_status,
+            "expiry": expiry_date,
+            "supplier": supplier,
+            "phc": phc_name
+        }
     )
 
     db.commit()
 
-    db.refresh(medicine)
-
     return {
-
         "status": "success",
-
-        "message": "Stock added successfully",
-
-        "Medicine_Name": medicine.Medicine_Name,
-
-        "Current_Stock": medicine.Current_Stock,
-
-        "Stock_Status": medicine.Stock_Status
-
+        "message": "Medicine added successfully",
+        "Medicine_ID": result.lastrowid,
+        "Medicine_Name": medicine_name,
+        "Current_Stock": current_stock,
+        "Stock_Status": stock_status
     }
 
 
 # =========================================================
-# PHARMACIST → REMOVE STOCK
+# UPDATE MEDICINE STOCK
 # =========================================================
 
-@router.put("/{medicine_id}/remove-stock")
-def remove_stock(
+@router.put("/{medicine_id}/stock")
+def update_stock(
     medicine_id: int,
-    data: MedicineStockUpdate,
+    data: dict,
     db: Session = Depends(get_db)
 ):
 
-    if data.quantity <= 0:
+    quantity = data.get("Quantity")
 
+    if quantity is None:
         raise HTTPException(
             status_code=400,
-            detail="Quantity must be greater than 0"
+            detail="Quantity is required"
         )
 
-    medicine = db.query(Medicine).filter(
-        Medicine.Medicine_ID == medicine_id
-    ).first()
+    quantity = int(quantity)
+
+    medicine = db.execute(
+        text("""
+            SELECT *
+            FROM medicines
+            WHERE Medicine_ID = :id
+        """),
+        {"id": medicine_id}
+    ).fetchone()
 
     if not medicine:
-
         raise HTTPException(
             status_code=404,
             detail="Medicine not found"
         )
 
-    if medicine.Current_Stock < data.quantity:
+    new_stock = (
+        medicine.Current_Stock or 0
+    ) + quantity
 
-        raise HTTPException(
-            status_code=400,
-            detail="Not enough medicine in stock"
-        )
+    if new_stock < 0:
+        new_stock = 0
 
-    medicine.Current_Stock -= data.quantity
+    if new_stock == 0:
+        status = "OUT_OF_STOCK"
 
-    medicine.Stock_Status = calculate_stock_status(
-        medicine.Current_Stock,
-        medicine.Reorder_Level
+    elif new_stock <= (
+        medicine.Reorder_Level or 0
+    ):
+        status = "LOW_STOCK"
+
+    else:
+        status = "AVAILABLE"
+
+    db.execute(
+        text("""
+            UPDATE medicines
+            SET
+                Current_Stock = :stock,
+                Stock_Status = :status
+            WHERE Medicine_ID = :id
+        """),
+        {
+            "stock": new_stock,
+            "status": status,
+            "id": medicine_id
+        }
     )
 
     db.commit()
 
-    db.refresh(medicine)
+    return {
+        "status": "success",
+        "message": "Stock updated",
+        "Medicine_ID": medicine_id,
+        "Current_Stock": new_stock,
+        "Stock_Status": status
+    }
+
+
+# =========================================================
+# CHECK MEDICINE REQUIREMENT FOR DISEASE
+# =========================================================
+
+@router.get("/requirement/{disease}")
+def get_medicine_requirement(
+    disease: str,
+    db: Session = Depends(get_db)
+):
+
+    medicine_map = {
+
+        "Dengue": [
+            "Paracetamol",
+            "ORS"
+        ],
+
+        "Fever": [
+            "Paracetamol"
+        ],
+
+        "Diarrhoea": [
+            "ORS"
+        ],
+
+        "Cough": [
+            "Cough Syrup"
+        ],
+
+        "Common Cold": [
+            "Cetirizine"
+        ],
+
+        "Anaemia": [
+            "Iron Tablets"
+        ]
+    }
+
+    required = medicine_map.get(
+        disease,
+        []
+    )
 
     return {
-
-        "status": "success",
-
-        "message": "Stock removed successfully",
-
-        "Medicine_Name": medicine.Medicine_Name,
-
-        "Current_Stock": medicine.Current_Stock,
-
-        "Stock_Status": medicine.Stock_Status
-
+        "disease": disease,
+        "required_medicines": required
     }

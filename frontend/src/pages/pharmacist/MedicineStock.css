@@ -1,3 +1,73 @@
+.stock-hero {
+  margin-bottom: 1.5rem;
+  padding: 1.5rem 1.75rem;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.95), rgba(37, 99, 235, 0.9));
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: var(--shadow-md);
+}
+
+.stock-hero-readonly {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(15, 118, 110, 0.9));
+}
+
+.stock-hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.stock-hero-kicker {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fde68a;
+}
+
+.stock-hero h2 {
+  font-size: 1.45rem;
+  font-weight: 800;
+}
+
+.stock-hero p {
+  max-width: 720px;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.stock-hero-badge {
+  min-width: 160px;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  text-align: center;
+}
+
+.stock-hero-badge-label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.85;
+}
+
+.stock-readonly-chip {
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #115e59;
+  background: linear-gradient(135deg, #ccfbf1, #dbeafe);
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  box-shadow: var(--shadow-sm);
+}
+
 .stock-controls-bar {
   margin-bottom: 2rem;
   display: flex;
@@ -125,6 +195,11 @@
 
 /* Responsive adjustments */
 @media (max-width: 992px) {
+  .stock-hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .stock-controls-bar {
     flex-direction: column;
     align-items: stretch;
@@ -137,6 +212,10 @@
 }
 
 @media (max-width: 768px) {
+  .stock-hero {
+    padding: 1.25rem;
+  }
+
   .patient-details-grid {
     grid-template-columns: 1fr;
   }

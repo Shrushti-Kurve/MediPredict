@@ -110,7 +110,6 @@ def medicine(
 def dashboard_api(
     data: PredictionRequest
 ):
-
     return dashboard(
         data.model_dump()
     )

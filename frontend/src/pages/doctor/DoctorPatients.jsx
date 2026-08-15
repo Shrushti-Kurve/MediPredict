@@ -1,23 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
-import { 
-  getPatients, 
-  getMedicines, 
-  prescribeMedicines 
-} from '../../services/localStorageService';
-import { 
-  FaSearch, 
-  FaEye, 
-  FaTimes, 
-  FaPlus, 
-  FaTrash, 
-  FaPills, 
-  FaPrescriptionBottleAlt, 
+
+import { getPatients, updatePatient } from '../../services/api/patientService';
+import {
+  getMedicines
+} from '../../services/api/medicineService';
+import { prescribeMultiple } from '../../services/api/prescriptionService';
+import {
+  FaSearch,
+  FaEye,
+  FaTimes,
+  FaPlus,
+  FaTrash,
+  FaPills,
+  FaPrescriptionBottleAlt,
   FaUserMd,
   FaFilePrescription,
   FaPrint
 } from 'react-icons/fa';
+
 import './DoctorPatients.css';
 
 const FREQUENCY_OPTIONS = [
@@ -45,612 +47,1074 @@ const DURATION_OPTIONS = [
 ];
 
 const DoctorPatients = () => {
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const [patients, setPatients] = useState([]);
   const [pharmacyStock, setPharmacyStock] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   const [searchQuery, setSearchQuery] = useState('');
+
   const [selectedPatient, setSelectedPatient] = useState(null);
+
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  
-  // Clinical edit form state
+
   const [editForm, setEditForm] = useState({
     id: '',
     disease: '',
+    symptoms: '',
     status: 'Active',
-    nextVisit: '',
     clinicalNotes: ''
   });
 
-  // Dynamic Multiple Medicines state for the prescription
   const [prescribedMeds, setPrescribedMeds] = useState([]);
 
-  const loadData = () => {
-    setPatients(getPatients());
-    setPharmacyStock(getMedicines());
+  // =====================================================
+  // LOAD PATIENTS + MEDICINES
+  // =====================================================
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const [patientsData, medicinesData] = await Promise.all([
+        getPatients(),
+        getMedicines()
+      ]);
+
+      setPatients(Array.isArray(patientsData) ? patientsData : []);
+      setPharmacyStock(Array.isArray(medicinesData) ? medicinesData : []);
+
+    } catch (err) {
+
+      console.error('LOAD DATA ERROR:', err);
+
+      setError(
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Unable to load patients and medicines'
+      );
+
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
+  // =====================================================
+  // SEARCH
+  // =====================================================
 
-  // Filter patients based on query
-  const filteredPatients = patients.filter(patient => 
-    patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    patient.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    patient.phone.includes(searchQuery) ||
-    (patient.disease && patient.disease.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredPatients = patients.filter(patient => {
+
+    const name = String(patient.Patient_Name || '').toLowerCase();
+    const id = String(patient.Patient_ID || '').toLowerCase();
+    const village = String(patient.Village || '').toLowerCase();
+    const disease = String(patient.Disease || '').toLowerCase();
+
+    const query = searchQuery.toLowerCase();
+
+    return (
+      name.includes(query) ||
+      id.includes(query) ||
+      village.includes(query) ||
+      disease.includes(query)
+    );
+  });
+
+  // =====================================================
+  // VIEW PATIENT
+  // =====================================================
 
   const handleOpenViewModal = (patient) => {
     setSelectedPatient(patient);
     setViewModalOpen(true);
   };
 
+  // =====================================================
+  // OPEN PRESCRIPTION
+  // =====================================================
+
   const handleOpenEditModal = (patient) => {
+
     setSelectedPatient(patient);
+
     setEditForm({
-      id: patient.id,
-      disease: patient.disease || '',
-      status: patient.status || 'Active',
-      nextVisit: patient.nextVisit || '',
-      clinicalNotes: patient.clinicalNotes || ''
+      id: patient.Patient_ID,
+      disease: patient.Disease || '',
+      symptoms: patient.Symptoms || '',
+      status: patient.Status || 'Active',
+      clinicalNotes: ''
     });
 
-    // Populate multi-medicine list from existing record
-    if (patient.medicines && patient.medicines.length > 0) {
-      setPrescribedMeds(patient.medicines.map((m, idx) => ({
-        id: m.id || `MED-${Date.now()}-${idx}`,
-        name: m.name || '',
-        dosage: m.dosage || '',
-        frequency: m.frequency || '',
-        duration: m.duration || '',
-        quantity: m.quantity !== undefined && m.quantity !== null ? m.quantity : '',
-        instructions: m.instructions || ''
-      })));
-    } else {
-      // Default with 1 clean empty medicine row ready for manual doctor input
-      setPrescribedMeds([
-        {
-          id: `MED-${Date.now()}-0`,
-          name: '',
-          dosage: '',
-          frequency: '',
-          duration: '',
-          quantity: '',
-          instructions: ''
-        }
-      ]);
-    }
-
-    setEditModalOpen(true);
-  };
-
-  // Prescription Dynamic List Handlers - Starts blank for manual input
-  const handleAddMedicineRow = () => {
-    setPrescribedMeds(prev => [
-      ...prev,
+    setPrescribedMeds([
       {
-        id: `MED-${Date.now()}-${prev.length}`,
+        id: `MED-${Date.now()}`,
+        medicineId: '',
         name: '',
         dosage: '',
         frequency: '',
         duration: '',
-        quantity: '',
+        quantity: 1,
+        instructions: ''
+      }
+    ]);
+
+    setEditModalOpen(true);
+  };
+
+  // =====================================================
+  // ADD MEDICINE ROW
+  // =====================================================
+
+  const handleAddMedicineRow = () => {
+
+    setPrescribedMeds(prev => [
+      ...prev,
+      {
+        id: `MED-${Date.now()}-${prev.length}`,
+        medicineId: '',
+        name: '',
+        dosage: '',
+        frequency: '',
+        duration: '',
+        quantity: 1,
         instructions: ''
       }
     ]);
   };
 
+  // =====================================================
+  // REMOVE MEDICINE ROW
+  // =====================================================
+
   const handleRemoveMedicineRow = (index) => {
-    if (prescribedMeds.length <= 1) {
-      // Reset the single row to blank instead of deleting everything
+
+    if (prescribedMeds.length === 1) {
+
       setPrescribedMeds([
         {
-          id: `MED-${Date.now()}-0`,
+          id: `MED-${Date.now()}`,
+          medicineId: '',
           name: '',
           dosage: '',
           frequency: '',
           duration: '',
-          quantity: '',
+          quantity: 1,
           instructions: ''
         }
       ]);
+
       return;
     }
-    setPrescribedMeds(prev => prev.filter((_, i) => i !== index));
+
+    setPrescribedMeds(prev =>
+      prev.filter((_, i) => i !== index)
+    );
   };
 
+  // =====================================================
+  // MEDICINE FIELD CHANGE
+  // =====================================================
+
   const handleMedFieldChange = (index, field, value) => {
+
     setPrescribedMeds(prev => {
+
       const updated = [...prev];
+
       updated[index] = {
         ...updated[index],
         [field]: value
       };
+
       return updated;
     });
   };
 
-  const handlePrescriptionSubmit = (e) => {
-    e.preventDefault();
-    if (!editForm.disease || !editForm.disease.trim()) {
-      alert('Please provide a diagnosed disease or condition.');
-      return;
-    }
+  // =====================================================
+  // MEDICINE SELECTION
+  // =====================================================
 
-    // Filter out rows that have medication name entered
-    const filledMeds = prescribedMeds.filter(m => m.name && m.name.trim().length > 0);
-    
-    if (filledMeds.length === 0) {
-      alert('Please manually enter at least one medicine name in the prescription.');
-      return;
-    }
+  const handleMedicineSelect = (index, medicineId) => {
 
-    // Ensure numeric quantity with default fallback of 1
-    const finalizedMeds = filledMeds.map((m, idx) => ({
-      id: m.id || `MED-${Date.now()}-${idx}`,
-      name: m.name.trim(),
-      dosage: m.dosage ? m.dosage.trim() : 'As directed',
-      frequency: m.frequency ? m.frequency.trim() : 'As directed',
-      duration: m.duration ? m.duration.trim() : 'As prescribed',
-      quantity: parseInt(m.quantity) > 0 ? parseInt(m.quantity) : 1,
-      instructions: m.instructions ? m.instructions.trim() : 'Follow physician instructions'
-    }));
+    const medicine = pharmacyStock.find(
+      m => String(m.Medicine_ID) === String(medicineId)
+    );
 
-    const updated = prescribeMedicines(editForm.id, {
-      medicines: finalizedMeds,
-      disease: editForm.disease.trim(),
-      notes: editForm.clinicalNotes,
-      status: editForm.status
+    setPrescribedMeds(prev => {
+
+      const updated = [...prev];
+
+      updated[index] = {
+        ...updated[index],
+        medicineId: medicineId,
+        name: medicine?.Medicine_Name || ''
+      };
+
+      return updated;
     });
+  };
 
-    if (updated) {
-      loadData();
+  // =====================================================
+  // DIAGNOSIS UPDATE
+  // =====================================================
+
+  const handleDiagnosis = async () => {
+
+    if (!selectedPatient) return;
+
+    try {
+
+      await updatePatient(
+        selectedPatient.Patient_ID,
+        {
+          Disease: editForm.disease,
+          Symptoms: editForm.symptoms
+        }
+      );
+
+      alert('Patient diagnosis updated successfully.');
+
+      await loadData();
+
+    } catch (err) {
+
+      console.error(err);
+
+      alert(
+        err?.response?.data?.detail ||
+        'Failed to update diagnosis'
+      );
+    }
+  };
+
+  // =====================================================
+  // PRESCRIPTION SUBMIT
+  // =====================================================
+
+  const handlePrescriptionSubmit = async (e) => {
+
+    e.preventDefault();
+
+    if (!editForm.disease.trim()) {
+
+      alert('Please enter the diagnosed disease.');
+
+      return;
+    }
+
+    const validMeds = prescribedMeds.filter(
+      med => med.medicineId && Number(med.quantity) > 0
+    );
+
+    if (validMeds.length === 0) {
+
+      alert('Please select at least one medicine.');
+
+      return;
+    }
+
+    try {
+
+      // -------------------------------------------------
+      // FIRST UPDATE DIAGNOSIS
+      // -------------------------------------------------
+
+      await updatePatient(
+        editForm.id,
+        {
+          Disease: editForm.disease,
+          Symptoms: editForm.symptoms
+        }
+      );
+
+      // -------------------------------------------------
+      // PRESCRIBE EACH MEDICINE (via prescriptionService)
+      // -------------------------------------------------
+
+      const medsPayload = validMeds.map(m => ({ medicine_id: Number(m.medicineId), quantity: Number(m.quantity) }));
+
+      // call sequentially for each medicine (backend supports single-item POST)
+      for (const item of medsPayload) {
+        await prescribeMultiple({ patient_id: Number(editForm.id), medicines: [item], user_id: null });
+      }
+
+      alert(
+        `Prescription saved successfully for ${selectedPatient.Patient_Name}.`
+      );
+
       setEditModalOpen(false);
       setSelectedPatient(null);
-      alert(`Prescription for ${updated.name} successfully updated with ${finalizedMeds.length} medication(s).`);
+
+      await loadData();
+
+    } catch (err) {
+
+      console.error('PRESCRIPTION ERROR:', err);
+
+      alert(
+        err?.response?.data?.detail?.message ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Failed to save prescription'
+      );
     }
   };
+
+  // =====================================================
+  // STATUS BADGE
+  // =====================================================
 
   const getStatusBadgeClass = (status) => {
+
     switch (status) {
-      case 'Critical': return 'badge badge-danger';
-      case 'Active': return 'badge badge-warning';
-      case 'Under Observation': return 'badge badge-info';
-      case 'Recovered': return 'badge badge-success';
-      default: return 'badge badge-primary';
+
+      case 'Critical':
+        return 'badge badge-danger';
+
+      case 'Active':
+        return 'badge badge-warning';
+
+      case 'Under Observation':
+        return 'badge badge-info';
+
+      case 'Recovered':
+        return 'badge badge-success';
+
+      default:
+        return 'badge badge-primary';
     }
   };
 
+  // =====================================================
+  // UI
+  // =====================================================
+
   return (
+
     <div className="dashboard-layout">
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={setSidebarOpen} />
-      
+
+      <Sidebar
+        isOpen={sidebarOpen}
+        toggleSidebar={setSidebarOpen}
+      />
+
       <div className="dashboard-main">
-        <DashboardHeader title="Doctor Consultation & Prescriptions" toggleSidebar={setSidebarOpen} />
-        
+
+        <DashboardHeader
+          title="Doctor Consultation & Prescriptions"
+          toggleSidebar={setSidebarOpen}
+        />
+
         <main className="dashboard-content">
+
+          {/* SEARCH */}
+
           <div className="doctor-patients-controls">
+
             <div className="search-bar-wrapper">
+
               <FaSearch className="search-icon" />
+
               <input
                 type="text"
-                placeholder="Search patient by ID, name, diagnosis, or phone..."
+                placeholder="Search patient by ID, name, diagnosis or village..."
                 className="form-control search-input"
                 value={searchQuery}
-                onChange={handleSearchChange}
+                onChange={(e) =>
+                  setSearchQuery(e.target.value)
+                }
               />
+
             </div>
+
           </div>
 
-          <div className="table-responsive">
-            {filteredPatients.length > 0 ? (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Patient ID</th>
-                    <th>Name</th>
-                    <th>Age / Gender</th>
-                    <th>Phone</th>
-                    <th>Diagnosis</th>
-                    <th>Prescriptions (Multi-Med)</th>
-                    <th>Last Consultation</th>
-                    <th>Status</th>
-                    <th className="text-center">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPatients.map(patient => {
-                    const meds = patient.medicines || [];
-                    return (
-                      <tr key={patient.id}>
-                        <td className="font-weight-600">{patient.id}</td>
-                        <td className="font-weight-600">{patient.name}</td>
-                        <td>{patient.age} yrs / {patient.gender}</td>
-                        <td>{patient.phone}</td>
-                        <td>
-                          <span className="disease-highlight">{patient.disease || 'Unspecified'}</span>
-                        </td>
-                        <td>
-                          <div className="doc-prescriptions-cell">
-                            {meds.length > 0 ? (
-                              <div className="doc-meds-summary">
-                                <span className="doc-med-badge">
-                                  <FaPills /> {meds.length} Med{meds.length > 1 ? 's' : ''}
-                                </span>
-                                <div className="doc-med-names-preview">
-                                  {meds.map((m, i) => (
-                                    <span key={i} className="med-tag-pill">
-                                      {m.name} {m.dosage ? `(${m.dosage})` : ''}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="text-muted font-size-sm">No Meds Prescribed</span>
-                            )}
-                          </div>
-                        </td>
-                        <td>{patient.lastVisit}</td>
-                        <td>
-                          <span className={getStatusBadgeClass(patient.status)}>
-                            {patient.status}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="table-action-btns">
-                            <button 
-                              className="btn-action btn-view" 
-                              title="View Patient Info & Rx Slip"
-                              onClick={() => handleOpenViewModal(patient)}
-                            >
-                              <FaEye /> View Rx
-                            </button>
-                            <button 
-                              className="btn-action btn-edit" 
-                              title="Prescribe / Update Multiple Medicines"
-                              onClick={() => handleOpenEditModal(patient)}
-                            >
-                              <FaFilePrescription /> Prescribe
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            ) : (
-              <div className="empty-state-container">
-                <p>No matching patient records found.</p>
-              </div>
-            )}
-          </div>
+          {/* LOADING */}
 
-          {/* VIEW DETAILS & PRESCRIPTION SLIP MODAL */}
-          {viewModalOpen && selectedPatient && (
-            <div className="modal-overlay">
-              <div className="modal-content doc-rx-modal">
-                <div className="modal-header">
-                  <div className="modal-header-titles">
-                    <h3>Prescription Record & Clinical Summary</h3>
-                    <span className="text-muted font-size-sm">Patient: {selectedPatient.name} ({selectedPatient.id})</span>
-                  </div>
-                  <button className="modal-close-btn" onClick={() => setViewModalOpen(false)}>
-                    <FaTimes />
-                  </button>
-                </div>
-                <div className="modal-body">
-                  {/* Prescription Slip Card */}
-                  <div className="rx-slip-card">
-                    <div className="rx-slip-header">
-                      <div className="rx-doctor-info">
-                        <h4><FaUserMd className="text-primary" /> {selectedPatient.doctor || 'Dr. Sarah Paul, MD'}</h4>
-                        <span>General & Rural Healthcare Physician • Reg #MP-2026-884</span>
-                      </div>
-                      <div className="rx-symbol">℞</div>
-                    </div>
-
-                    <div className="rx-patient-meta-grid">
-                      <div><strong>Patient:</strong> {selectedPatient.name}</div>
-                      <div><strong>Age / Gender:</strong> {selectedPatient.age} yrs / {selectedPatient.gender}</div>
-                      <div><strong>Phone:</strong> {selectedPatient.phone}</div>
-                      <div><strong>Blood Group:</strong> {selectedPatient.bloodGroup}</div>
-                      <div><strong>Diagnosis:</strong> <span className="text-primary font-weight-700">{selectedPatient.disease}</span></div>
-                      <div><strong>Last Visit:</strong> {selectedPatient.lastVisit}</div>
-                    </div>
-
-                    <div className="rx-table-section">
-                      <h4 className="rx-section-title"><FaPills /> Prescribed Medications</h4>
-                      {selectedPatient.medicines && selectedPatient.medicines.length > 0 ? (
-                        <div className="table-responsive">
-                          <table className="rx-medicines-table">
-                            <thead>
-                              <tr>
-                                <th>#</th>
-                                <th>Medicine Name</th>
-                                <th>Dosage</th>
-                                <th>Frequency</th>
-                                <th>Duration</th>
-                                <th>Qty</th>
-                                <th>Instructions</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {selectedPatient.medicines.map((med, idx) => (
-                                <tr key={idx}>
-                                  <td>{idx + 1}</td>
-                                  <td className="font-weight-700 text-primary">{med.name}</td>
-                                  <td>{med.dosage || '500mg'}</td>
-                                  <td>{med.frequency}</td>
-                                  <td>{med.duration}</td>
-                                  <td><strong>{med.quantity}</strong></td>
-                                  <td className="text-muted">{med.instructions}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <p className="text-muted" style={{ fontStyle: 'italic', padding: '0.75rem 0' }}>
-                          No medications prescribed for this patient.
-                        </p>
-                      )}
-                    </div>
-
-                    {selectedPatient.clinicalNotes && (
-                      <div className="rx-notes-section">
-                        <strong>Doctor Clinical Notes:</strong>
-                        <p>{selectedPatient.clinicalNotes}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button 
-                    className="btn btn-outline-primary"
-                    onClick={() => window.print()}
-                  >
-                    <FaPrint /> Print Rx Slip
-                  </button>
-                  <button className="btn btn-secondary" onClick={() => setViewModalOpen(false)}>Close</button>
-                </div>
-              </div>
+          {loading && (
+            <div className="empty-state-container">
+              <p>Loading patients...</p>
             </div>
           )}
 
-          {/* PRESCRIBE / EDIT MULTIPLE MEDICINES MODAL */}
-          {editModalOpen && selectedPatient && (
+          {/* ERROR */}
+
+          {!loading && error && (
+            <div className="empty-state-container">
+              <p>{error}</p>
+
+              <button
+                className="btn btn-primary"
+                onClick={loadData}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* PATIENT TABLE */}
+
+          {!loading && !error && (
+
+            <div className="table-responsive">
+
+              {filteredPatients.length > 0 ? (
+
+                <table className="table">
+
+                  <thead>
+
+                    <tr>
+                      <th>Patient ID</th>
+                      <th>Name</th>
+                      <th>Age / Gender</th>
+                      <th>Village</th>
+                      <th>Diagnosis</th>
+                      <th>Last Visit</th>
+                      <th>Action</th>
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    {filteredPatients.map(patient => (
+
+                      <tr key={patient.Patient_ID}>
+
+                        <td className="font-weight-600">
+                          {patient.Patient_ID}
+                        </td>
+
+                        <td className="font-weight-600">
+                          {patient.Patient_Name}
+                        </td>
+
+                        <td>
+                          {patient.Age || '-'} yrs /
+                          {' '}
+                          {patient.Gender || '-'}
+                        </td>
+
+                        <td>
+                          {patient.Village || '-'}
+                        </td>
+
+                        <td>
+                          <span className="disease-highlight">
+                            {patient.Disease || 'Not Diagnosed'}
+                          </span>
+                        </td>
+
+                        <td>
+                          {patient.Visit_Date || '-'}
+                        </td>
+
+                        <td>
+
+                          <div className="table-action-btns">
+
+                            <button
+                              className="btn-action btn-view"
+                              onClick={() =>
+                                handleOpenViewModal(patient)
+                              }
+                            >
+                              <FaEye /> View
+                            </button>
+
+                            <button
+                              className="btn-action btn-edit"
+                              onClick={() =>
+                                handleOpenEditModal(patient)
+                              }
+                            >
+                              <FaFilePrescription /> Prescribe
+                            </button>
+
+                          </div>
+
+                        </td>
+
+                      </tr>
+
+                    ))}
+
+                  </tbody>
+
+                </table>
+
+              ) : (
+
+                <div className="empty-state-container">
+                  <p>No matching patient records found.</p>
+                </div>
+
+              )}
+
+            </div>
+
+          )}
+
+          {/* =================================================
+              VIEW MODAL
+          ================================================= */}
+
+          {viewModalOpen && selectedPatient && (
+
             <div className="modal-overlay">
-              <div className="modal-content doc-prescribe-modal" style={{ maxWidth: '850px' }}>
+
+              <div className="modal-content doc-rx-modal">
+
                 <div className="modal-header">
+
                   <div>
-                    <h3>Prescribe Medications: {selectedPatient.name}</h3>
-                    <span className="text-muted font-size-sm">Patient ID: {selectedPatient.id} • Age: {selectedPatient.age} yrs • Blood Group: {selectedPatient.bloodGroup}</span>
+
+                    <h3>
+                      Patient Clinical Summary
+                    </h3>
+
+                    <span className="text-muted">
+                      Patient ID: {selectedPatient.Patient_ID}
+                    </span>
+
                   </div>
-                  <button className="modal-close-btn" onClick={() => setEditModalOpen(false)}>
+
+                  <button
+                    className="modal-close-btn"
+                    onClick={() => setViewModalOpen(false)}
+                  >
                     <FaTimes />
                   </button>
+
                 </div>
-                <form onSubmit={handlePrescriptionSubmit}>
-                  <div className="modal-body" style={{ maxHeight: '75vh', overflowY: 'auto' }}>
-                    
-                    {/* Clinical Overview Row */}
-                    <div className="form-row">
-                      <div className="form-group" style={{ flex: 2 }}>
-                        <label htmlFor="disease">Clinical Diagnosis / Condition *</label>
-                        <input
-                          type="text"
-                          id="disease"
-                          className="form-control"
-                          placeholder="e.g. Hypertension & Type 2 Diabetes"
-                          value={editForm.disease}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, disease: e.target.value }))}
-                          required
-                        />
+
+                <div className="modal-body">
+
+                  <div className="rx-slip-card">
+
+                    <div className="rx-slip-header">
+
+                      <div className="rx-doctor-info">
+
+                        <h4>
+                          <FaUserMd />
+                          {' '}
+                          {selectedPatient.Doctor || 'Doctor'}
+                        </h4>
+
                       </div>
-                      <div className="form-group" style={{ flex: 1 }}>
-                        <label htmlFor="status">Patient Status *</label>
-                        <select
-                          id="status"
-                          className="form-control"
-                          value={editForm.status}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
-                          required
-                        >
-                          <option value="Active">Active</option>
-                          <option value="Under Observation">Under Observation</option>
-                          <option value="Recovered">Recovered</option>
-                          <option value="Critical">Critical (Flag Risk)</option>
-                        </select>
+
+                      <div className="rx-symbol">
+                        ℞
                       </div>
+
                     </div>
 
-                    {/* Prescription Builder Section */}
+                    <div className="rx-patient-meta-grid">
+
+                      <div>
+                        <strong>Patient:</strong>{' '}
+                        {selectedPatient.Patient_Name}
+                      </div>
+
+                      <div>
+                        <strong>Age:</strong>{' '}
+                        {selectedPatient.Age || '-'}
+                      </div>
+
+                      <div>
+                        <strong>Gender:</strong>{' '}
+                        {selectedPatient.Gender || '-'}
+                      </div>
+
+                      <div>
+                        <strong>Village:</strong>{' '}
+                        {selectedPatient.Village || '-'}
+                      </div>
+
+                      <div>
+                        <strong>Diagnosis:</strong>{' '}
+                        <span className="text-primary">
+                          {selectedPatient.Disease || 'Not diagnosed'}
+                        </span>
+                      </div>
+
+                      <div>
+                        <strong>Symptoms:</strong>{' '}
+                        {selectedPatient.Symptoms || '-'}
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+                <div className="modal-footer">
+
+                  <button
+                    className="btn btn-outline-primary"
+                    onClick={() => window.print()}
+                  >
+                    <FaPrint /> Print
+                  </button>
+
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() =>
+                      setViewModalOpen(false)
+                    }
+                  >
+                    Close
+                  </button>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          )}
+
+          {/* =================================================
+              PRESCRIPTION MODAL
+          ================================================= */}
+
+          {editModalOpen && selectedPatient && (
+
+            <div className="modal-overlay">
+
+              <div
+                className="modal-content doc-prescribe-modal"
+                style={{ maxWidth: '850px' }}
+              >
+
+                <div className="modal-header">
+
+                  <div>
+
+                    <h3>
+                      Prescribe Medications
+                    </h3>
+
+                    <span className="text-muted">
+                      {selectedPatient.Patient_Name}
+                      {' • '}
+                      ID: {selectedPatient.Patient_ID}
+                    </span>
+
+                  </div>
+
+                  <button
+                    className="modal-close-btn"
+                    onClick={() =>
+                      setEditModalOpen(false)
+                    }
+                  >
+                    <FaTimes />
+                  </button>
+
+                </div>
+
+                <form onSubmit={handlePrescriptionSubmit}>
+
+                  <div
+                    className="modal-body"
+                    style={{
+                      maxHeight: '75vh',
+                      overflowY: 'auto'
+                    }}
+                  >
+
+                    {/* DIAGNOSIS */}
+
+                    <div className="form-row">
+
+                      <div
+                        className="form-group"
+                        style={{ flex: 1 }}
+                      >
+
+                        <label>
+                          Clinical Diagnosis *
+                        </label>
+
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="e.g. Dengue"
+                          value={editForm.disease}
+                          onChange={(e) =>
+                            setEditForm(prev => ({
+                              ...prev,
+                              disease: e.target.value
+                            }))
+                          }
+                          required
+                        />
+
+                      </div>
+
+                      <div
+                        className="form-group"
+                        style={{ flex: 1 }}
+                      >
+
+                        <label>
+                          Symptoms
+                        </label>
+
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="e.g. Fever, headache"
+                          value={editForm.symptoms}
+                          onChange={(e) =>
+                            setEditForm(prev => ({
+                              ...prev,
+                              symptoms: e.target.value
+                            }))
+                          }
+                        />
+
+                      </div>
+
+                    </div>
+
+                    {/* MEDICINES */}
+
                     <div className="rx-builder-section">
+
                       <div className="rx-builder-header">
+
                         <div>
+
                           <h4 className="rx-builder-title">
-                            <FaPrescriptionBottleAlt className="text-primary" /> Multiple Medicine Prescription ({prescribedMeds.length})
+
+                            <FaPrescriptionBottleAlt />
+
+                            {' '}
+                            Prescription
+                            ({prescribedMeds.length})
+
                           </h4>
-                          <span className="text-muted font-size-sm">Add, remove, or adjust dosages for each medicine given to patient</span>
+
                         </div>
+
                         <button
                           type="button"
-                          className="btn btn-outline-primary btn-sm add-med-btn"
+                          className="btn btn-outline-primary btn-sm"
                           onClick={handleAddMedicineRow}
                         >
                           <FaPlus /> Add Medicine
                         </button>
+
                       </div>
 
-                      {/* Pharmacy Available Medicines Datalist for Autocomplete */}
-                      <datalist id="pharmacyMedicinesList">
-                        {pharmacyStock.map(med => (
-                          <option key={med.id} value={med.name}>
-                            {med.name} ({med.category}) - {med.quantity} in stock
-                          </option>
-                        ))}
-                      </datalist>
+                      {/* MEDICINE ROWS */}
 
-                      {/* Frequency Suggestions Datalist */}
-                      <datalist id="frequencyOptionsList">
-                        {FREQUENCY_OPTIONS.map((freq, i) => (
-                          <option key={i} value={freq} />
-                        ))}
-                      </datalist>
-
-                      {/* Duration Suggestions Datalist */}
-                      <datalist id="durationOptionsList">
-                        {DURATION_OPTIONS.map((dur, i) => (
-                          <option key={i} value={dur} />
-                        ))}
-                      </datalist>
-
-                      {/* Dynamic Medicine Rows */}
                       <div className="rx-med-cards-container">
+
                         {prescribedMeds.map((med, index) => (
-                          <div key={med.id || index} className="rx-med-card">
+
+                          <div
+                            key={med.id}
+                            className="rx-med-card"
+                          >
+
                             <div className="rx-med-card-header">
-                              <span className="rx-med-number">Medicine #{index + 1}</span>
+
+                              <span className="rx-med-number">
+                                Medicine #{index + 1}
+                              </span>
+
                               <button
                                 type="button"
                                 className="btn-delete-med"
-                                onClick={() => handleRemoveMedicineRow(index)}
-                                title={prescribedMeds.length > 1 ? "Remove this medicine" : "Clear fields"}
-                                aria-label="Remove medicine"
+                                onClick={() =>
+                                  handleRemoveMedicineRow(index)
+                                }
                               >
-                                <FaTrash /> {prescribedMeds.length > 1 ? 'Remove' : 'Clear'}
+                                <FaTrash /> Remove
                               </button>
+
                             </div>
 
                             <div className="rx-med-card-grid">
-                              {/* Medicine Name - Full manual text input with stock suggestions */}
-                              <div className="form-group med-name-field">
-                                <label>Medicine Name *</label>
-                                <input
-                                  type="text"
-                                  list="pharmacyMedicinesList"
+
+                              {/* MEDICINE */}
+
+                              <div
+                                className="form-group med-name-field"
+                              >
+
+                                <label>
+                                  Medicine *
+                                </label>
+
+                                <select
                                   className="form-control"
-                                  placeholder="Type medicine name (e.g. Paracetamol, Amoxicillin)"
-                                  value={med.name}
-                                  onChange={(e) => handleMedFieldChange(index, 'name', e.target.value)}
+                                  value={med.medicineId}
+                                  onChange={(e) =>
+                                    handleMedicineSelect(
+                                      index,
+                                      e.target.value
+                                    )
+                                  }
                                   required
-                                />
+                                >
+
+                                  <option value="">
+                                    Select medicine
+                                  </option>
+
+                                  {pharmacyStock.map(medicine => (
+
+                                    <option
+                                      key={medicine.Medicine_ID}
+                                      value={medicine.Medicine_ID}
+                                    >
+                                      {medicine.Medicine_Name}
+                                      {' '}
+                                      —
+                                      {' '}
+                                      Stock:
+                                      {' '}
+                                      {medicine.Current_Stock}
+                                    </option>
+
+                                  ))}
+
+                                </select>
+
                               </div>
 
-                              {/* Dosage - Manual text input */}
+                              {/* DOSAGE */}
+
                               <div className="form-group">
-                                <label>Dosage</label>
+
+                                <label>
+                                  Dosage
+                                </label>
+
                                 <input
                                   type="text"
                                   className="form-control"
-                                  placeholder="e.g. 500mg, 1 tab, 10ml"
+                                  placeholder="500mg"
                                   value={med.dosage}
-                                  onChange={(e) => handleMedFieldChange(index, 'dosage', e.target.value)}
+                                  onChange={(e) =>
+                                    handleMedFieldChange(
+                                      index,
+                                      'dosage',
+                                      e.target.value
+                                    )
+                                  }
                                 />
+
                               </div>
 
-                              {/* Frequency - Manual text input with suggestion options */}
-                              <div className="form-group med-freq-field">
-                                <label>Frequency</label>
+                              {/* FREQUENCY */}
+
+                              <div className="form-group">
+
+                                <label>
+                                  Frequency
+                                </label>
+
                                 <input
                                   type="text"
                                   list="frequencyOptionsList"
                                   className="form-control"
-                                  placeholder="e.g. 1-0-1, Twice daily, SOS"
+                                  placeholder="1-0-1"
                                   value={med.frequency}
-                                  onChange={(e) => handleMedFieldChange(index, 'frequency', e.target.value)}
+                                  onChange={(e) =>
+                                    handleMedFieldChange(
+                                      index,
+                                      'frequency',
+                                      e.target.value
+                                    )
+                                  }
                                 />
+
                               </div>
 
-                              {/* Duration - Manual text input with suggestion options */}
+                              {/* DURATION */}
+
                               <div className="form-group">
-                                <label>Duration</label>
+
+                                <label>
+                                  Duration
+                                </label>
+
                                 <input
                                   type="text"
                                   list="durationOptionsList"
                                   className="form-control"
-                                  placeholder="e.g. 5 days, 10 days, 1 month"
+                                  placeholder="5 days"
                                   value={med.duration}
-                                  onChange={(e) => handleMedFieldChange(index, 'duration', e.target.value)}
+                                  onChange={(e) =>
+                                    handleMedFieldChange(
+                                      index,
+                                      'duration',
+                                      e.target.value
+                                    )
+                                  }
                                 />
+
                               </div>
 
-                              {/* Quantity - Manual number input */}
-                              <div className="form-group med-qty-field">
-                                <label>Quantity *</label>
+                              {/* QUANTITY */}
+
+                              <div className="form-group">
+
+                                <label>
+                                  Quantity *
+                                </label>
+
                                 <input
                                   type="number"
                                   min="1"
                                   className="form-control"
-                                  placeholder="e.g. 10"
                                   value={med.quantity}
-                                  onChange={(e) => handleMedFieldChange(index, 'quantity', e.target.value)}
+                                  onChange={(e) =>
+                                    handleMedFieldChange(
+                                      index,
+                                      'quantity',
+                                      e.target.value
+                                    )
+                                  }
                                   required
                                 />
+
                               </div>
 
-                              {/* Instructions - Manual text input */}
-                              <div className="form-group med-inst-field">
-                                <label>Special Instructions</label>
+                              {/* INSTRUCTIONS */}
+
+                              <div className="form-group">
+
+                                <label>
+                                  Instructions
+                                </label>
+
                                 <input
                                   type="text"
                                   className="form-control"
-                                  placeholder="e.g. Take after meals with warm water"
+                                  placeholder="After meals"
                                   value={med.instructions}
-                                  onChange={(e) => handleMedFieldChange(index, 'instructions', e.target.value)}
+                                  onChange={(e) =>
+                                    handleMedFieldChange(
+                                      index,
+                                      'instructions',
+                                      e.target.value
+                                    )
+                                  }
                                 />
+
                               </div>
+
                             </div>
+
                           </div>
+
                         ))}
+
                       </div>
 
-                      <div className="rx-builder-footer">
-                        <button
-                          type="button"
-                          className="btn btn-outline-secondary btn-sm"
-                          onClick={handleAddMedicineRow}
-                        >
-                          <FaPlus /> Add Another Medication
-                        </button>
-                      </div>
                     </div>
 
-                    {/* Clinical Notes */}
-                    <div className="form-group" style={{ marginTop: '1.25rem' }}>
-                      <label htmlFor="clinicalNotes">Doctor Clinical Notes / Dietary Advice</label>
+                    {/* NOTES */}
+
+                    <div
+                      className="form-group"
+                      style={{ marginTop: '1.25rem' }}
+                    >
+
+                      <label>
+                        Clinical Notes
+                      </label>
+
                       <textarea
-                        id="clinicalNotes"
                         className="form-control"
                         rows="3"
-                        placeholder="Additional recommendations, dietary restrictions, or follow-up milestones..."
                         value={editForm.clinicalNotes}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, clinicalNotes: e.target.value }))}
+                        onChange={(e) =>
+                          setEditForm(prev => ({
+                            ...prev,
+                            clinicalNotes: e.target.value
+                          }))
+                        }
                       />
+
                     </div>
+
                   </div>
+
                   <div className="modal-footer">
-                    <button type="button" className="btn btn-secondary" onClick={() => setEditModalOpen(false)}>Cancel</button>
-                    <button type="submit" className="btn btn-primary">
-                      <FaFilePrescription /> Issue & Save Prescription
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() =>
+                        setEditModalOpen(false)
+                      }
+                    >
+                      Cancel
                     </button>
+
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                    >
+                      <FaFilePrescription />
+                      {' '}
+                      Issue Prescription
+                    </button>
+
                   </div>
+
                 </form>
+
               </div>
+
             </div>
+
           )}
+
+          {/* DATALISTS */}
+
+          <datalist id="frequencyOptionsList">
+
+            {FREQUENCY_OPTIONS.map((freq, i) => (
+              <option key={i} value={freq} />
+            ))}
+
+          </datalist>
+
+          <datalist id="durationOptionsList">
+
+            {DURATION_OPTIONS.map((dur, i) => (
+              <option key={i} value={dur} />
+            ))}
+
+          </datalist>
+
         </main>
+
       </div>
+
     </div>
   );
 };
 
 export default DoctorPatients;
-

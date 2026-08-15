@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
 import PowerBIEmbed from '../../components/PowerBIEmbed/PowerBIEmbed';
-import { getPatients, getAlerts } from '../../services/localStorageService';
+import { getLoggedInUser } from '../../services/localStorageService';
+import { getPatients as apiGetPatients } from '../../services/api/patientService';
+import { getAlerts as apiGetAlerts } from '../../services/api/alertService';
 import { 
   FaUserInjured, 
   FaCalendarDay, 
@@ -18,6 +20,7 @@ import './DoctorDashboard.css';
 const DoctorDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeViewTab, setActiveViewTab] = useState('overview'); // 'overview' | 'powerbi'
+  const user = getLoggedInUser();
   const [stats, setStats] = useState({
     totalPatients: 0,
     todaysPatients: 0,
@@ -28,23 +31,43 @@ const DoctorDashboard = () => {
   const [recentAlerts, setRecentAlerts] = useState([]);
 
   useEffect(() => {
-    const patients = getPatients();
-    const alerts = getAlerts();
-    
-    const todayStr = '2026-08-14';
-    const todays = patients.filter(p => p.lastVisit === todayStr).length;
-    const active = patients.filter(p => p.status === 'Active' || p.status === 'Under Observation' || p.status === 'Critical').length;
-    const docAlerts = alerts.filter(a => a.role === 'doctor');
+    const load = async () => {
+      try {
+        const [patientsRaw, alertsRaw] = await Promise.all([
+          apiGetPatients(),
+          apiGetAlerts()
+        ]);
 
-    setStats({
-      totalPatients: patients.length,
-      todaysPatients: todays,
-      activeTreatments: active,
-      alertsCount: docAlerts.length
-    });
+        const patients = Array.isArray(patientsRaw) ? patientsRaw.map(p => ({
+          Patient_ID: p.Patient_ID,
+          Patient_Name: p.Patient_Name,
+          disease: p.Disease,
+          lastVisit: p.Visit_Date ? new Date(p.Visit_Date).toISOString().split('T')[0] : '' ,
+          status: p.Status || 'Active'
+        })) : [];
 
-    setRecentPatients(patients.slice(0, 5));
-    setRecentAlerts(docAlerts.slice(0, 5));
+        const alerts = Array.isArray(alertsRaw) ? alertsRaw : [];
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        const todays = patients.filter(p => p.lastVisit === todayStr).length;
+        const active = patients.filter(p => ['Active','Under Observation','Critical'].includes(p.status)).length;
+        const docAlerts = alerts.filter(a => a.Alert_Category === 'DISEASE' || (a.Alert_Category === 'MEDICINE' && a.Severity));
+
+        setStats({
+          totalPatients: patients.length,
+          todaysPatients: todays,
+          activeTreatments: active,
+          alertsCount: docAlerts.length
+        });
+
+        setRecentPatients(patients.slice(0,5));
+        setRecentAlerts(docAlerts.slice(0,5));
+      } catch (err) {
+        console.error('Failed loading doctor dashboard data', err);
+      }
+    };
+
+    load();
   }, []);
 
   const getStatusBadgeClass = (status) => {
@@ -71,9 +94,27 @@ const DoctorDashboard = () => {
       <Sidebar isOpen={sidebarOpen} toggleSidebar={setSidebarOpen} />
       
       <div className="dashboard-main">
-        <DashboardHeader title="Doctor Clinical Workspace" toggleSidebar={setSidebarOpen} />
+        <DashboardHeader title="" toggleSidebar={setSidebarOpen} />
         
         <main className="dashboard-content">
+          <section className="doctor-welcome-panel">
+            <div>
+              <span className="doctor-welcome-kicker">Doctor Workspace</span>
+              <h2>Welcome, Dr. {user?.name || 'Doctor'}</h2>
+              <p>Quick access to patients, alerts, medicine stock, and analytics.</p>
+            </div>
+            <div className="doctor-welcome-mini-cards">
+              <div className="doctor-mini-card">
+                <span>Patients</span>
+                <strong>{stats.totalPatients}</strong>
+              </div>
+              <div className="doctor-mini-card doctor-mini-card-accent">
+                <span>Alerts</span>
+                <strong>{stats.alertsCount}</strong>
+              </div>
+            </div>
+          </section>
+
           {/* Main Dashboard Navigation Tabs */}
           <div className="dashboard-view-tabs">
             <button 

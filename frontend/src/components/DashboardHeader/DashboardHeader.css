@@ -1,7 +1,8 @@
 .dashboard-header {
   height: var(--header-height);
-  background-color: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(236, 254, 255, 0.9));
+  border-bottom: 1px solid rgba(15, 118, 110, 0.12);
+  backdrop-filter: blur(14px);
   padding: 0 2rem;
   display: flex;
   align-items: center;
@@ -17,8 +18,38 @@
   gap: 1rem;
 }
 
+.db-header-logo-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-right: 0.75rem;
+  border-right: 1px solid rgba(15, 118, 110, 0.12);
+}
+
+.db-header-logo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.db-header-title-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.db-header-welcome {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--primary);
+}
+
 .db-sidebar-toggle {
-  display: none;
+  display: flex;
   font-size: 1.25rem;
   color: var(--text-primary);
   cursor: pointer;
@@ -27,8 +58,9 @@
 
 .db-header-title {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-primary);
+  line-height: 1.1;
 }
 
 .db-header-right {
@@ -91,16 +123,21 @@
 
 /* Tablet & Mobile Layout Shifts */
 @media (max-width: 992px) {
-  .db-sidebar-toggle {
-    display: flex;
-  }
-  
   .dashboard-header {
     padding: 0 1.5rem;
   }
 }
 
 @media (max-width: 576px) {
+  .db-header-logo-link {
+    padding-right: 0.5rem;
+  }
+
+  .db-header-logo {
+    width: 36px;
+    height: 36px;
+  }
+
   .db-user-name {
     display: none;
   }

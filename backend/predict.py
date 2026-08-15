@@ -1,52 +1,56 @@
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 from collections import Counter
 
-from database import engine
 from sqlalchemy import text
+from database import engine
 
 
-# ============================================================
-# SETTINGS
-# ============================================================
-
-# FOR HACKATHON TESTING:
-# Keep this as 2 so the prediction can be demonstrated now.
-#
-# BEFORE FINAL DEMO, change this to 100.
+# ---------------------------------------------------------
+# HACKATHON TESTING
+# ---------------------------------------------------------
+# Change this to 100 for the final system.
 PATIENT_TRIGGER = 2
 
 MODEL_NAME = "MediPredict Outbreak Model"
 MODEL_VERSION = "1.0"
 
 
-# ============================================================
+# ---------------------------------------------------------
 # GET HISTORICAL DATA
-# ============================================================
+# ---------------------------------------------------------
 
 def get_historical_data():
+
     query = text("""
         SELECT
             Patient_ID,
             Village,
             Disease,
             Visit_Date,
+            Season,
             Year,
             Month
         FROM patients_cleaned
         WHERE Disease IS NOT NULL
-          AND Village IS NOT NULL
+        AND Village IS NOT NULL
     """)
 
     with engine.connect() as connection:
+
         result = connection.execute(query)
-        return [dict(row._mapping) for row in result]
+
+        return [
+            dict(row._mapping)
+            for row in result
+        ]
 
 
-# ============================================================
-# GET LIVE PATIENT DATA
-# ============================================================
+# ---------------------------------------------------------
+# GET CURRENT PATIENT DATA
+# ---------------------------------------------------------
 
-def get_live_patient_data():
+def get_live_patients():
+
     query = text("""
         SELECT
             Patient_ID,
@@ -55,19 +59,24 @@ def get_live_patient_data():
             Visit_Date
         FROM patients
         WHERE Disease IS NOT NULL
-          AND Village IS NOT NULL
+        AND Village IS NOT NULL
     """)
 
     with engine.connect() as connection:
+
         result = connection.execute(query)
-        return [dict(row._mapping) for row in result]
+
+        return [
+            dict(row._mapping)
+            for row in result
+        ]
 
 
-# ============================================================
-# CHECK WHETHER MODEL SHOULD RUN
-# ============================================================
+# ---------------------------------------------------------
+# CHECK TRIGGER
+# ---------------------------------------------------------
 
-def should_run_model():
+def check_trigger():
 
     query = text("""
         SELECT COUNT(*) AS total
@@ -76,16 +85,17 @@ def should_run_model():
     """)
 
     with engine.connect() as connection:
+
         result = connection.execute(query).fetchone()
 
-    total_patients = result.total
+        total = result.total
 
-    return total_patients >= PATIENT_TRIGGER
+    return total >= PATIENT_TRIGGER, total
 
 
-# ============================================================
-# CALCULATE RISK
-# ============================================================
+# ---------------------------------------------------------
+# RISK LEVEL
+# ---------------------------------------------------------
 
 def calculate_risk(predicted_cases):
 
@@ -95,66 +105,73 @@ def calculate_risk(predicted_cases):
     elif predicted_cases >= 50:
         return "MEDIUM"
 
-    else:
-        return "LOW"
+    return "LOW"
 
 
-# ============================================================
-# RUN OUTBREAK PREDICTION
-# ============================================================
+# ---------------------------------------------------------
+# AUTOMATIC PREDICTION
+# ---------------------------------------------------------
 
 def run_automatic_prediction():
 
-    if not should_run_model():
+    triggered, patient_count = check_trigger()
+
+    if not triggered:
 
         return {
             "status": "waiting",
-            "message": (
-                f"Prediction not triggered yet. "
-                f"Need {PATIENT_TRIGGER} patients with disease information."
-            )
+            "patient_count": patient_count,
+            "required_patients": PATIENT_TRIGGER,
+            "message": "Prediction trigger not reached."
         }
 
-    historical_data = get_historical_data()
-    live_data = get_live_patient_data()
 
-    if not historical_data:
+    historical = get_historical_data()
+
+    live_patients = get_live_patients()
+
+
+    if not historical:
+
         return {
             "status": "error",
-            "message": "No historical training data available."
+            "message": "No historical data available."
         }
 
-    if not live_data:
+
+    if not live_patients:
+
         return {
             "status": "error",
             "message": "No live patient disease data available."
         }
 
-    # --------------------------------------------------------
-    # Simple baseline model
-    # --------------------------------------------------------
-    #
-    # We use historical disease frequency + current cases.
-    #
-    # This gives us a working ML-style prediction pipeline
-    # for the hackathon.
-    # --------------------------------------------------------
 
-    historical_counter = Counter(
+    # -----------------------------------------------------
+    # Count historical diseases
+    # -----------------------------------------------------
+
+    historical_diseases = Counter(
         row["Disease"]
-        for row in historical_data
+        for row in historical
         if row["Disease"]
     )
 
-    live_counter = Counter(
+
+    # -----------------------------------------------------
+    # Count current diseases
+    # -----------------------------------------------------
+
+    live_diseases = Counter(
         row["Disease"]
-        for row in live_data
+        for row in live_patients
         if row["Disease"]
     )
 
-    # --------------------------------------------------------
-    # Create model run
-    # --------------------------------------------------------
+
+    # -----------------------------------------------------
+    # CREATE MODEL RUN
+    # -----------------------------------------------------
 
     with engine.begin() as connection:
 
@@ -170,7 +187,7 @@ def run_automatic_prediction():
                 )
                 VALUES
                 (
-                    :model_name,
+                    :name,
                     :version,
                     NOW(),
                     :accuracy,
@@ -178,12 +195,13 @@ def run_automatic_prediction():
                 )
             """),
             {
-                "model_name": MODEL_NAME,
+                "name": MODEL_NAME,
                 "version": MODEL_VERSION,
                 "accuracy": 90.00,
                 "status": "SUCCESS"
             }
         )
+
 
         model_run_id = connection.execute(
             text("""
@@ -191,39 +209,40 @@ def run_automatic_prediction():
             """)
         ).scalar()
 
-        # ----------------------------------------------------
-        # Generate predictions
-        # ----------------------------------------------------
 
         predictions = []
 
-        for disease, live_cases in live_counter.items():
 
-            historical_cases = historical_counter.get(
+        # -------------------------------------------------
+        # CREATE OUTBREAK PREDICTIONS
+        # -------------------------------------------------
+
+        for disease, current_cases in live_diseases.items():
+
+            historical_cases = historical_diseases.get(
                 disease,
                 0
             )
 
-            # Simple forecasting logic:
-            #
-            # historical disease frequency +
-            # current observed cases
-            #
-            predicted_cases = historical_cases + live_cases
 
-            risk_level = calculate_risk(predicted_cases)
+            predicted_cases = (
+                historical_cases +
+                current_cases
+            )
 
-            # Find villages affected by this disease
+
+            risk = calculate_risk(predicted_cases)
+
+
             villages = set(
                 row["Village"]
-                for row in live_data
+                for row in live_patients
                 if row["Disease"] == disease
-                and row["Village"]
             )
+
 
             for village in villages:
 
-                # Insert outbreak prediction
                 connection.execute(
                     text("""
                         INSERT INTO outbreak_predictions
@@ -244,7 +263,7 @@ def run_automatic_prediction():
                             NOW(),
                             :forecast_date,
                             :predicted_cases,
-                            :risk_level,
+                            :risk,
                             :model_run_id,
                             :trigger_reason
                         )
@@ -252,34 +271,82 @@ def run_automatic_prediction():
                     {
                         "village": village,
                         "disease": disease,
-                        "forecast_date": date.today()
-                        + timedelta(days=30),
-                        "predicted_cases": predicted_cases,
-                        "risk_level": risk_level,
-                        "model_run_id": model_run_id,
-                        "trigger_reason": (
+                        "forecast_date":
+                            date.today() + timedelta(days=30),
+                        "predicted_cases":
+                            predicted_cases,
+                        "risk":
+                            risk,
+                        "model_run_id":
+                            model_run_id,
+                        "trigger_reason":
                             f"{PATIENT_TRIGGER}_PATIENT_TRIGGER"
-                        )
                     }
                 )
 
-                predictions.append({
-                    "village": village,
-                    "disease": disease,
-                    "predicted_cases": predicted_cases,
-                    "risk_level": risk_level
-                })
+
+                predictions.append(
+                    {
+                        "village": village,
+                        "disease": disease,
+                        "predicted_cases":
+                            predicted_cases,
+                        "risk_level":
+                            risk
+                    }
+                )
+                # Create an alert for MEDIUM or DANGER risks
+                if risk in ("MEDIUM", "DANGER"):
+
+                    severity = "HIGH" if risk == "DANGER" else "MEDIUM"
+
+                    connection.execute(
+                        text("""
+                            INSERT INTO alerts
+                            (
+                                Medicine_ID,
+                                Disease,
+                                Village,
+                                Alert_Type,
+                                Severity,
+                                Alert_Category,
+                                Alert_Message,
+                                Alert_Date,
+                                Status
+                            )
+                            VALUES
+                            (
+                                NULL,
+                                :disease,
+                                :village,
+                                'DISEASE_OUTBREAK',
+                                :severity,
+                                'DISEASE',
+                                :message,
+                                NOW(),
+                                'Active'
+                            )
+                        """),
+                        {
+                            "disease": disease,
+                            "village": village,
+                            "severity": severity,
+                            "message": f"Predicted {predicted_cases} {disease} cases in {village} ({risk} risk)"
+                        }
+                    )
+
 
     return {
         "status": "success",
         "model_run_id": model_run_id,
+        "patient_count": patient_count,
         "predictions": predictions
     }
 
 
-# ============================================================
-# FUNCTION USED BY EXISTING API
-# ============================================================
+# ---------------------------------------------------------
+# USED BY APP.PY
+# ---------------------------------------------------------
 
 def predict_outbreak(data=None):
 

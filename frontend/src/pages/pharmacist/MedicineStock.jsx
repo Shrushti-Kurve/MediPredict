@@ -9,7 +9,7 @@ import {
 import { FaSearch, FaPlus, FaEye, FaEdit, FaPlusCircle, FaTimes } from 'react-icons/fa';
 import './MedicineStock.css';
 
-const MedicineStock = () => {
+const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitle = 'Monitor stock, expiry, and availability at a glance.' }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [medicines, setMedicines] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,6 +21,7 @@ const MedicineStock = () => {
   const [qtyModalOpen, setQtyModalOpen] = useState(false);
 
   const [selectedMed, setSelectedMed] = useState(null);
+  const canEdit = !readOnly;
 
   // Form States
   const [medForm, setMedForm] = useState({
@@ -152,9 +153,21 @@ const MedicineStock = () => {
       <Sidebar isOpen={sidebarOpen} toggleSidebar={setSidebarOpen} />
       
       <div className="dashboard-main">
-        <DashboardHeader title="Medicine Inventory" toggleSidebar={setSidebarOpen} />
+        <DashboardHeader title={title} toggleSidebar={setSidebarOpen} />
         
         <main className="dashboard-content">
+          <section className={`stock-hero ${readOnly ? 'stock-hero-readonly' : ''}`}>
+            <div className="stock-hero-copy">
+              <span className="stock-hero-kicker">{readOnly ? 'Doctor Read-Only View' : 'Pharmacy Control Center'}</span>
+              <h2>{title}</h2>
+              <p>{readOnly ? 'Review availability, stock levels, and expiry dates. Inventory edits stay restricted to pharmacists.' : subtitle}</p>
+            </div>
+            <div className="stock-hero-badge">
+              <span className="stock-hero-badge-label">Live Inventory</span>
+              <strong>{medicines.length} Items</strong>
+            </div>
+          </section>
+
           <div className="stock-controls-bar">
             <div className="search-bar-wrapper">
               <FaSearch className="search-icon" />
@@ -166,9 +179,13 @@ const MedicineStock = () => {
                 onChange={handleSearchChange}
               />
             </div>
-            <button className="btn btn-primary add-medicine-btn" onClick={handleOpenAddModal}>
-              <FaPlus /> Add Medicine
-            </button>
+            {canEdit ? (
+              <button className="btn btn-primary add-medicine-btn" onClick={handleOpenAddModal}>
+                <FaPlus /> Add Medicine
+              </button>
+            ) : (
+              <div className="stock-readonly-chip">Doctors can view only</div>
+            )}
           </div>
 
           <div className="table-responsive">
@@ -213,20 +230,24 @@ const MedicineStock = () => {
                             >
                               <FaEye /> View
                             </button>
-                            <button 
-                              className="btn-action btn-edit" 
-                              onClick={() => handleOpenEditModal(med)}
-                              title="Edit Details"
-                            >
-                              <FaEdit /> Edit
-                            </button>
-                            <button 
-                              className="btn-action btn-qty" 
-                              onClick={() => handleOpenQtyModal(med)}
-                              title="Quick Update Quantity"
-                            >
-                              <FaPlusCircle /> Qty
-                            </button>
+                            {canEdit && (
+                              <>
+                                <button 
+                                  className="btn-action btn-edit" 
+                                  onClick={() => handleOpenEditModal(med)}
+                                  title="Edit Details"
+                                >
+                                  <FaEdit /> Edit
+                                </button>
+                                <button 
+                                  className="btn-action btn-qty" 
+                                  onClick={() => handleOpenQtyModal(med)}
+                                  title="Quick Update Quantity"
+                                >
+                                  <FaPlusCircle /> Qty
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -301,7 +322,7 @@ const MedicineStock = () => {
           )}
 
           {/* ADD MEDICINE MODAL */}
-          {addModalOpen && (
+          {canEdit && addModalOpen && (
             <div className="modal-overlay">
               <div className="modal-content">
                 <div className="modal-header">
@@ -360,7 +381,7 @@ const MedicineStock = () => {
           )}
 
           {/* EDIT MEDICINE MODAL */}
-          {editModalOpen && selectedMed && (
+          {canEdit && editModalOpen && selectedMed && (
             <div className="modal-overlay">
               <div className="modal-content">
                 <div className="modal-header">
@@ -419,7 +440,7 @@ const MedicineStock = () => {
           )}
 
           {/* UPDATE QUANTITY QUICK MODAL */}
-          {qtyModalOpen && selectedMed && (
+          {canEdit && qtyModalOpen && selectedMed && (
             <div className="modal-overlay">
               <div className="modal-content" style={{ maxWidth: '400px' }}>
                 <div className="modal-header">

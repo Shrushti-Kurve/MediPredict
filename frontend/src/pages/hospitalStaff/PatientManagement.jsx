@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
-import { 
-  getPatients, 
-  addPatient, 
-  updatePatient, 
-  deletePatient 
-} from '../../services/localStorageService';
+import {
+  getPatients,
+  addPatient,
+  updatePatient,
+  deletePatient
+} from '../../services/api/patientService';
 import { 
   FaSearch, 
   FaPlus, 
@@ -25,13 +25,48 @@ import './PatientManagement.css';
 
 const PatientManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [patients, setPatients] = useState([]);
   
   // Filtering and Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDisease, setFilterDisease] = useState('');
   const [filterGender, setFilterGender] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadPatients();
+  }, []);
+
+  const loadPatients = async () => {
+    try {
+      const data = await getPatients();
+      // Map backend patient fields to frontend shape
+      const mapped = Array.isArray(data) ? data.map(p => ({
+        id: p.Patient_ID ? `P${p.Patient_ID}` : (p.id || ''),
+        Patient_ID: p.Patient_ID || p.id,
+        name: p.Patient_Name || p.name || '',
+        age: p.Age || p.age || '',
+        gender: p.Gender || p.gender || 'Male',
+        address: p.Village || p.address || '',
+        phone: p.Phone || p.phone || '',
+        email: p.Email || p.email || '',
+        emergencyContact: p.EmergencyContact || p.emergencyContact || '',
+        disease: p.Disease || p.disease || '',
+        doctor: p.Doctor || p.doctor || 'Dr. Sarah Paul',
+        lastVisit: p.Visit_Date ? (new Date(p.Visit_Date).toISOString().split('T')[0]) : (p.lastVisit || ''),
+        nextVisit: p.Next_Visit || p.nextVisit || '',
+        status: p.Status || p.status || 'Active',
+        medicines: p.medicines || []
+      })) : [];
+
+      setPatients(mapped);
+    } catch (error) {
+      console.error("Failed to load patients:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -47,6 +82,7 @@ const PatientManagement = () => {
 
   // Form States (Hospital staff does not provide medicine fields)
   const [patientForm, setPatientForm] = useState({
+    Patient_ID: '',
     id: '',
     name: '',
     dob: '',
@@ -64,13 +100,11 @@ const PatientManagement = () => {
     status: 'Active'
   });
 
-  const loadPatients = () => {
-    setPatients(getPatients());
-  };
+ 
 
-  useEffect(() => {
-    loadPatients();
-  }, []);
+  // useEffect(() => {
+  //   loadPatients();
+  // }, []);
 
   // Set patient age automatically if date of birth is selected
   useEffect(() => {
@@ -87,7 +121,9 @@ const PatientManagement = () => {
 
   // Form Handling
   const handleInputChange = (e) => {
-    const { id, value } = e.target;
+    let { id, value } = e.target;
+    // Normalize edit form ids that use edit- prefix
+    id = id.replace(/^edit-/, '');
     setPatientForm(prev => ({
       ...prev,
       [id]: value
@@ -100,6 +136,7 @@ const PatientManagement = () => {
       : 1011;
     
     setPatientForm({
+      Patient_ID: undefined,
       id: `P${nextNum}`,
       name: '',
       dob: '',
@@ -119,22 +156,54 @@ const PatientManagement = () => {
     setAddModalOpen(true);
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!patientForm.name || !patientForm.dob || !patientForm.phone || !patientForm.address || !patientForm.emergencyContact || !patientForm.disease) {
+
+    if (
+      !patientForm.name ||
+      !patientForm.dob ||
+      !patientForm.phone ||
+      !patientForm.address ||
+      !patientForm.emergencyContact ||
+      !patientForm.disease
+    ) {
       alert('Please fill out all required patient profile fields.');
       return;
     }
-    
-    addPatient(patientForm);
-    loadPatients();
-    setAddModalOpen(false);
-    alert('Patient record registered successfully. Doctor can now prescribe medications in Doctor workspace.');
+
+    try {
+      setLoading(true);
+
+      // Map form to backend expected schema
+      const payload = {
+        Patient_Name: patientForm.name,
+        Age: patientForm.age ? Number(patientForm.age) : undefined,
+        Gender: patientForm.gender,
+        Village: patientForm.address,
+        Visit_Date: patientForm.lastVisit || new Date().toISOString().split('T')[0]
+      };
+
+      const resp = await addPatient(payload);
+
+      // resp may include Patient_ID — reload will pick it up
+
+      await loadPatients();
+
+      setAddModalOpen(false);
+
+      alert('Patient record registered successfully.');
+    } catch (error) {
+      console.error("Failed to add patient:", error);
+      alert(`Failed to add patient: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOpenEditModal = (patient) => {
     setSelectedPatient(patient);
     setPatientForm({
+      Patient_ID: patient.Patient_ID || undefined,
       id: patient.id,
       name: patient.name,
       dob: patient.dob || '',
@@ -154,34 +223,70 @@ const PatientManagement = () => {
     setEditModalOpen(true);
   };
 
-  const handleEditSubmit = (e) => {
-    e.preventDefault();
-    if (!patientForm.name || !patientForm.dob || !patientForm.phone || !patientForm.address || !patientForm.emergencyContact) {
-      alert('Please fill out all required details.');
-      return;
-    }
+  const handleEditSubmit = async (e) => {
+  e.preventDefault();
 
-    updatePatient(patientForm);
-    loadPatients();
+  if (
+    !patientForm.name ||
+    !patientForm.dob ||
+    !patientForm.phone ||
+    !patientForm.address ||
+    !patientForm.emergencyContact
+  ) {
+    alert('Please fill out all required details.');
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const targetId = patientForm.Patient_ID || parseInt((patientForm.id || '').replace('P',''));
+    await updatePatient(targetId, patientForm);
+
+    await loadPatients();
+
     setEditModalOpen(false);
     setSelectedPatient(null);
+
     alert('Patient record updated successfully.');
-  };
+  } catch (error) {
+    console.error("Failed to update patient:", error);
+    alert(`Failed to update patient: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleOpenDeleteModal = (patient) => {
-    setSelectedPatient(patient);
-    setDeleteModalOpen(true);
-  };
 
-  const handleDeleteConfirm = () => {
-    if (selectedPatient) {
-      deletePatient(selectedPatient.id);
-      loadPatients();
-      setDeleteModalOpen(false);
-      setSelectedPatient(null);
-      alert('Patient record removed successfully.');
-    }
-  };
+
+const handleOpenDeleteModal = (patient) => {
+  setSelectedPatient(patient);
+  setDeleteModalOpen(true);
+};
+
+
+  const handleDeleteConfirm = async () => {
+  if (!selectedPatient) return;
+
+  try {
+    setLoading(true);
+
+    const targetId = selectedPatient.Patient_ID || parseInt((selectedPatient.id || '').replace('P',''));
+    await deletePatient(targetId);
+
+    await loadPatients();
+
+    setDeleteModalOpen(false);
+    setSelectedPatient(null);
+
+    alert('Patient record removed successfully.');
+  } catch (error) {
+    console.error("Failed to delete patient:", error);
+    alert(`Failed to delete patient: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Get distinct list of diseases for filtering dropdown
   const uniqueDiseases = [...new Set(patients.map(p => p.disease).filter(Boolean))];

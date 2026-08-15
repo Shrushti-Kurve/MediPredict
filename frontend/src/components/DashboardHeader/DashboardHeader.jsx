@@ -2,10 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaBars } from 'react-icons/fa';
 import { getLoggedInUser } from '../../services/localStorageService';
+import logo from '../../assets/logo/logo.png';
 import './DashboardHeader.css';
 
 const DashboardHeader = ({ title, toggleSidebar }) => {
   const user = getLoggedInUser();
+  const displayName = user?.name?.trim() || 'Doctor';
 
   const getRoleLabel = (role) => {
     if (role === 'doctor') return 'Doctor';
@@ -31,7 +33,15 @@ const DashboardHeader = ({ title, toggleSidebar }) => {
         <button className="db-sidebar-toggle" onClick={() => toggleSidebar && toggleSidebar(true)} aria-label="Open Sidebar">
           <FaBars />
         </button>
-        <h1 className="db-header-title">{title}</h1>
+
+        <Link to="/" className="db-header-logo-link" aria-label="Go to home page">
+          <img src={logo} alt="MediPredict Logo" className="db-header-logo" />
+        </Link>
+
+        <div className="db-header-title-stack">
+          <span className="db-header-welcome">Welcome, {displayName}</span>
+          {title ? <h1 className="db-header-title">{title}</h1> : null}
+        </div>
       </div>
       
       <div className="db-header-right">

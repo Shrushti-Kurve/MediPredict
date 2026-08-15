@@ -1,182 +1,38 @@
-.signup-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%);
-  padding: 2rem 1.5rem;
+.auth-page-signup .auth-visual-signup {
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.86), rgba(249, 115, 22, 0.64)),
+    url('https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=1200&q=80') center/cover no-repeat;
 }
 
-.signup-card {
-  background-color: var(--surface);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  padding: 2.5rem;
-  max-width: 650px;
-  width: 100%;
-  border: 1px solid var(--border);
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+.auth-form-panel {
+  background:
+    radial-gradient(circle at top right, rgba(249, 115, 22, 0.08), transparent 20%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 250, 240, 0.96));
 }
 
-.signup-logo-section {
-  text-align: center;
-  margin-bottom: 1.75rem;
+.auth-card-signup {
+  max-width: 680px;
 }
 
-.signup-logo {
-  height: 70px;
-  width: auto;
-  object-fit: contain;
-  margin-bottom: 0.5rem;
-}
-
-.signup-title {
-  font-size: 1.65rem;
-  font-weight: 700;
-  color: var(--primary);
-  margin-bottom: 0.25rem;
-}
-
-.signup-subtitle {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.signup-form {
-  margin-bottom: 1.5rem;
-}
-
-.signup-error {
-  background-color: var(--danger-light);
-  color: var(--danger);
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius);
-  font-size: 0.875rem;
-  margin-bottom: 1.25rem;
-  border-left: 4px solid var(--danger);
-  font-weight: 500;
-  animation: fadeIn 0.2s ease-out;
-}
-
-.signup-success {
-  background-color: var(--success-light);
-  color: var(--success);
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius);
-  font-size: 0.875rem;
-  margin-bottom: 1.25rem;
-  border-left: 4px solid var(--success);
-  font-weight: 500;
-  animation: fadeIn 0.2s ease-out;
-}
-
-.signup-form-row {
+.auth-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-  margin-bottom: 1.25rem;
+  gap: 1rem;
 }
 
-.signup-form-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.signup-form-group label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
-}
-
-.signup-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.signup-input-icon {
-  position: absolute;
-  left: 1rem;
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-}
-
-.signup-input-field {
-  width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 0.95rem;
-  color: var(--text-primary);
-  background-color: var(--background);
-  transition: var(--transition-fast);
-}
-
-.signup-input-field:focus {
-  border-color: var(--primary);
-  background-color: var(--surface);
-  box-shadow: 0 0 0 3px var(--primary-light);
-}
-
-.signup-select {
+.auth-select {
   appearance: none;
   cursor: pointer;
 }
 
-.password-toggle-btn {
-  position: absolute;
-  right: 1rem;
-  color: var(--text-secondary);
-  font-size: 1.1rem;
-  display: flex;
-  align-items: center;
-  transition: var(--transition-fast);
+.auth-message-success {
+  background: rgba(22, 163, 74, 0.08);
+  color: #15803d;
+  border: 1px solid rgba(22, 163, 74, 0.15);
 }
 
-.password-toggle-btn:hover {
-  color: var(--text-primary);
-}
-
-.signup-btn {
-  width: 100%;
-  padding: 0.85rem;
-  font-size: 1rem;
-  font-weight: 600;
-  margin-top: 1rem;
-  box-shadow: var(--shadow-sm);
-}
-
-.signup-footer {
-  text-align: center;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  border-top: 1px solid var(--border);
-  padding-top: 1.25rem;
-}
-
-.login-link {
-  color: var(--primary);
-  font-weight: 600;
-}
-
-.login-link:hover {
-  text-decoration: underline;
-}
-
-@media (max-width: 768px) {
-  .signup-form-row {
+@media (max-width: 900px) {
+  .auth-form-row {
     grid-template-columns: 1fr;
-    gap: 1.25rem;
-    margin-bottom: 0;
-  }
-  
-  .signup-form-group {
-    margin-bottom: 1.25rem;
-  }
-  
-  .signup-card {
-    padding: 1.75rem;
   }
 }
