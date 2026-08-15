@@ -41,7 +41,26 @@ const PatientManagement = () => {
   const loadPatients = async () => {
     try {
       const data = await getPatients();
-      setPatients(data);
+      // Map backend patient fields to frontend shape
+      const mapped = Array.isArray(data) ? data.map(p => ({
+        id: p.Patient_ID ? `P${p.Patient_ID}` : (p.id || ''),
+        Patient_ID: p.Patient_ID || p.id,
+        name: p.Patient_Name || p.name || '',
+        age: p.Age || p.age || '',
+        gender: p.Gender || p.gender || 'Male',
+        address: p.Village || p.address || '',
+        phone: p.Phone || p.phone || '',
+        email: p.Email || p.email || '',
+        emergencyContact: p.EmergencyContact || p.emergencyContact || '',
+        disease: p.Disease || p.disease || '',
+        doctor: p.Doctor || p.doctor || 'Dr. Sarah Paul',
+        lastVisit: p.Visit_Date ? (new Date(p.Visit_Date).toISOString().split('T')[0]) : (p.lastVisit || ''),
+        nextVisit: p.Next_Visit || p.nextVisit || '',
+        status: p.Status || p.status || 'Active',
+        medicines: p.medicines || []
+      })) : [];
+
+      setPatients(mapped);
     } catch (error) {
       console.error("Failed to load patients:", error);
     } finally {
@@ -63,6 +82,7 @@ const PatientManagement = () => {
 
   // Form States (Hospital staff does not provide medicine fields)
   const [patientForm, setPatientForm] = useState({
+    Patient_ID: '',
     id: '',
     name: '',
     dob: '',
@@ -101,7 +121,9 @@ const PatientManagement = () => {
 
   // Form Handling
   const handleInputChange = (e) => {
-    const { id, value } = e.target;
+    let { id, value } = e.target;
+    // Normalize edit form ids that use edit- prefix
+    id = id.replace(/^edit-/, '');
     setPatientForm(prev => ({
       ...prev,
       [id]: value
@@ -114,6 +136,7 @@ const PatientManagement = () => {
       : 1011;
     
     setPatientForm({
+      Patient_ID: undefined,
       id: `P${nextNum}`,
       name: '',
       dob: '',
@@ -151,7 +174,18 @@ const PatientManagement = () => {
     try {
       setLoading(true);
 
-      await addPatient(patientForm);
+      // Map form to backend expected schema
+      const payload = {
+        Patient_Name: patientForm.name,
+        Age: patientForm.age ? Number(patientForm.age) : undefined,
+        Gender: patientForm.gender,
+        Village: patientForm.address,
+        Visit_Date: patientForm.lastVisit || new Date().toISOString().split('T')[0]
+      };
+
+      const resp = await addPatient(payload);
+
+      // resp may include Patient_ID — reload will pick it up
 
       await loadPatients();
 
@@ -169,6 +203,7 @@ const PatientManagement = () => {
   const handleOpenEditModal = (patient) => {
     setSelectedPatient(patient);
     setPatientForm({
+      Patient_ID: patient.Patient_ID || undefined,
       id: patient.id,
       name: patient.name,
       dob: patient.dob || '',
@@ -205,7 +240,8 @@ const PatientManagement = () => {
   try {
     setLoading(true);
 
-    await updatePatient(patientForm.id, patientForm);
+    const targetId = patientForm.Patient_ID || parseInt((patientForm.id || '').replace('P',''));
+    await updatePatient(targetId, patientForm);
 
     await loadPatients();
 
@@ -235,7 +271,8 @@ const handleOpenDeleteModal = (patient) => {
   try {
     setLoading(true);
 
-    await deletePatient(selectedPatient.id);
+    const targetId = selectedPatient.Patient_ID || parseInt((selectedPatient.id || '').replace('P',''));
+    await deletePatient(targetId);
 
     await loadPatients();
 

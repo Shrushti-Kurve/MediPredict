@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
 import PowerBIEmbed from '../../components/PowerBIEmbed/PowerBIEmbed';
-import { getPatients, getAlerts } from '../../services/localStorageService';
+import { getPatients as apiGetPatients } from '../../services/api/patientService';
+import { getAlerts as apiGetAlerts } from '../../services/api/alertService';
 import { 
   FaUserInjured, 
   FaUserPlus, 
@@ -27,27 +28,45 @@ const HospitalDashboard = () => {
   const [recentAlerts, setRecentAlerts] = useState([]);
 
   useEffect(() => {
-    const patients = getPatients();
-    const alerts = getAlerts();
-    
-    const todayStr = '2026-08-14';
-    
-    // Calculate statistics
-    const total = patients.length;
-    const news = patients.filter(p => p.lastVisit === todayStr || p.lastVisit === '2026-08-13').length;
-    const active = patients.filter(p => p.status === 'Active' || p.status === 'Critical' || p.status === 'Under Observation').length;
-    const todays = patients.filter(p => p.lastVisit === todayStr).length;
+    const load = async () => {
+      try {
+        const [patientsRaw, alertsRaw] = await Promise.all([apiGetPatients(), apiGetAlerts()]);
 
-    setStats({
-      totalPatients: total,
-      newPatients: news,
-      activePatients: active,
-      todaysVisits: todays
-    });
+        const patients = Array.isArray(patientsRaw) ? patientsRaw.map(p => ({
+          id: p.Patient_ID ? `P${p.Patient_ID}` : (p.id || ''),
+          name: p.Patient_Name || p.name || '',
+          age: p.Age || p.age || '',
+          gender: p.Gender || p.gender || 'Male',
+          disease: p.Disease || p.disease || '',
+          status: p.Status || p.status || 'Active',
+          lastVisit: p.Visit_Date ? new Date(p.Visit_Date).toISOString().split('T')[0] : ''
+        })) : [];
 
-    setRecentPatients(patients.slice(0, 5));
-    // Filter alerts for staff role
-    setRecentAlerts(alerts.filter(a => a.role === 'hospitalStaff').slice(0, 5));
+        const todayStr = new Date().toISOString().split('T')[0];
+        const total = patients.length;
+        const news = patients.filter(p => p.lastVisit === todayStr || p.lastVisit === new Date(Date.now()-86400000).toISOString().split('T')[0]).length;
+        const active = patients.filter(p => ['Active','Critical','Under Observation'].includes(p.status)).length;
+        const todays = patients.filter(p => p.lastVisit === todayStr).length;
+
+        setStats({ totalPatients: total, newPatients: news, activePatients: active, todaysVisits: todays });
+        setRecentPatients(patients.slice(0,5));
+
+        const alerts = Array.isArray(alertsRaw) ? alertsRaw.map(a => ({
+          id: a.Alert_ID,
+          type: a.Severity === 'HIGH' ? 'Critical' : (a.Severity === 'MEDIUM' ? 'Warning' : 'Info'),
+          message: a.Alert_Message,
+          date: a.Alert_Date,
+          category: a.Alert_Category,
+          alert_type: a.Alert_Type
+        })) : [];
+
+        setRecentAlerts(alerts.filter(a => a.alert_type === 'DISEASE_OUTBREAK' || a.category === 'DISEASE').slice(0,5));
+      } catch (err) {
+        console.error('Failed to load hospital dashboard data', err);
+      }
+    };
+
+    load();
   }, []);
 
   const getStatusBadgeClass = (status) => {

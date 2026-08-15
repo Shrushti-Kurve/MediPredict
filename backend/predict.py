@@ -295,6 +295,45 @@ def run_automatic_prediction():
                             risk
                     }
                 )
+                # Create an alert for MEDIUM or DANGER risks
+                if risk in ("MEDIUM", "DANGER"):
+
+                    severity = "HIGH" if risk == "DANGER" else "MEDIUM"
+
+                    connection.execute(
+                        text("""
+                            INSERT INTO alerts
+                            (
+                                Medicine_ID,
+                                Disease,
+                                Village,
+                                Alert_Type,
+                                Severity,
+                                Alert_Category,
+                                Alert_Message,
+                                Alert_Date,
+                                Status
+                            )
+                            VALUES
+                            (
+                                NULL,
+                                :disease,
+                                :village,
+                                'DISEASE_OUTBREAK',
+                                :severity,
+                                'DISEASE',
+                                :message,
+                                NOW(),
+                                'Active'
+                            )
+                        """),
+                        {
+                            "disease": disease,
+                            "village": village,
+                            "severity": severity,
+                            "message": f"Predicted {predicted_cases} {disease} cases in {village} ({risk} risk)"
+                        }
+                    )
 
 
     return {

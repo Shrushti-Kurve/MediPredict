@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
 import PowerBIEmbed from '../../components/PowerBIEmbed/PowerBIEmbed';
-import { getMedicines, getAlerts } from '../../services/localStorageService';
+import { getMedicines as apiGetMedicines } from '../../services/api/medicineService';
+import { getAlerts as apiGetAlerts } from '../../services/api/alertService';
 import { 
   FaPills, 
   FaCheckCircle, 
@@ -27,25 +28,42 @@ const PharmacistDashboard = () => {
   const [recentAlerts, setRecentAlerts] = useState([]);
 
   useEffect(() => {
-    const medicines = getMedicines();
-    const alerts = getAlerts();
+    const load = async () => {
+      try {
+        const [medsRaw, alertsRaw] = await Promise.all([apiGetMedicines(), apiGetAlerts()]);
 
-    // Calculate stats
-    const total = medicines.length;
-    const available = medicines.filter(m => m.quantity > m.minimumStock).length;
-    const low = medicines.filter(m => m.quantity <= m.minimumStock && m.quantity > 0).length;
-    const out = medicines.filter(m => m.quantity === 0).length;
+        const meds = Array.isArray(medsRaw) ? medsRaw.map(m => ({
+          id: m.Medicine_ID || m.id,
+          name: m.Medicine_Name || m.name,
+          quantity: m.Current_Stock || m.quantity || 0,
+          minimumStock: m.Reorder_Level || m.minimumStock || 0,
+          category: m.PHC_Name || m.Supplier || ''
+        })) : [];
 
-    setStats({
-      total,
-      available,
-      lowStock: low,
-      outOfStock: out
-    });
+        const total = meds.length;
+        const available = meds.filter(m => m.quantity > m.minimumStock).length;
+        const low = meds.filter(m => m.quantity <= m.minimumStock && m.quantity > 0).length;
+        const out = meds.filter(m => m.quantity === 0).length;
 
-    setRecentMeds(medicines.slice(0, 5));
-    // Filter alerts for pharmacist role
-    setRecentAlerts(alerts.filter(a => a.role === 'pharmacist').slice(0, 5));
+        setStats({ total, available, lowStock: low, outOfStock: out });
+        setRecentMeds(meds.slice(0,5));
+
+        const alerts = Array.isArray(alertsRaw) ? alertsRaw.map(a => ({
+          id: a.Alert_ID,
+          type: a.Severity === 'HIGH' ? 'Critical' : (a.Severity === 'MEDIUM' ? 'Warning' : 'Info'),
+          message: a.Alert_Message,
+          date: a.Alert_Date,
+          alert_type: a.Alert_Type,
+          category: a.Alert_Category
+        })) : [];
+
+        setRecentAlerts(alerts.filter(a => a.alert_type === 'MEDICINE_STOCK' || a.category === 'MEDICINE').slice(0,5));
+      } catch (err) {
+        console.error('Failed to load pharmacist dashboard data', err);
+      }
+    };
+
+    load();
   }, []);
 
   const getStatusBadge = (med) => {

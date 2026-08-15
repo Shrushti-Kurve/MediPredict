@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
-import { getAlerts } from '../../services/localStorageService';
+import { getAlerts as apiGetAlerts } from '../../services/api/alertService';
 import { FaSearch, FaBell, FaExclamationTriangle, FaInfoCircle, FaPlusCircle } from 'react-icons/fa';
 import './PharmacistAlerts.css';
 
@@ -11,9 +11,26 @@ const PharmacistAlerts = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    // Filter alerts for pharmacist role
-    const allAlerts = getAlerts();
-    setAlerts(allAlerts.filter(a => a.role === 'pharmacist'));
+    const load = async () => {
+      try {
+        const raw = await apiGetAlerts();
+        const mapped = (Array.isArray(raw) ? raw : []).map(a => ({
+          id: a.Alert_ID,
+          type: a.Severity === 'HIGH' ? 'Critical' : (a.Severity === 'MEDIUM' ? 'Warning' : 'Info'),
+          message: a.Alert_Message,
+          date: a.Alert_Date,
+          category: a.Alert_Category,
+          alert_type: a.Alert_Type
+        }));
+
+        // Filter for medicine-related alerts
+        setAlerts(mapped.filter(a => a.alert_type === 'MEDICINE_STOCK' || a.category === 'MEDICINE'));
+      } catch (err) {
+        console.error('Failed to load alerts', err);
+      }
+    };
+
+    load();
   }, []);
 
   const handleSearchChange = (e) => {

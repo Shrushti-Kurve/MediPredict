@@ -63,6 +63,16 @@ def add_patient(
     db.commit()
 
     db.refresh(patient)
+    # Try to run automatic prediction but do not fail patient creation on errors
+    prediction_result = None
+
+    try:
+        prediction_result = run_automatic_prediction()
+    except Exception as e:
+        prediction_result = {
+            "status": "prediction_error",
+            "message": str(e)
+        }
 
     return {
 
@@ -72,7 +82,9 @@ def add_patient(
 
         "Patient_ID": patient.Patient_ID,
 
-        "Patient_Name": patient.Patient_Name
+        "Patient_Name": patient.Patient_Name,
+
+        "automatic_prediction": prediction_result
 
     }
 

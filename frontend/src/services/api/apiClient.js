@@ -47,4 +47,34 @@ const apiClient = async (endpoint, options = {}) => {
   }
 };
 
+apiClient.get = async (endpoint, options = {}) => {
+  return apiClient(endpoint, {
+    ...options,
+    method: "GET",
+  });
+};
+
+apiClient.post = async (endpoint, body = null, options = {}) => {
+  return apiClient(endpoint, {
+    ...options,
+    method: "POST",
+    body,
+  });
+};
+
+apiClient.put = async (endpoint, body = null, options = {}) => {
+  return apiClient(endpoint, {
+    ...options,
+    method: "PUT",
+    body,
+  });
+};
+
+apiClient.delete = async (endpoint, options = {}) => {
+  return apiClient(endpoint, {
+    ...options,
+    method: "DELETE",
+  });
+};
+
 export default apiClient;

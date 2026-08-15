@@ -4,10 +4,9 @@ import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
 
 import { getPatients, updatePatient } from '../../services/api/patientService';
 import {
-  getMedicines,
-  prescribeMedicine
+  getMedicines
 } from '../../services/api/medicineService';
-
+import { prescribeMultiple } from '../../services/api/prescriptionService';
 import {
   FaSearch,
   FaEye,
@@ -339,17 +338,14 @@ const DoctorPatients = () => {
       );
 
       // -------------------------------------------------
-      // PRESCRIBE EACH MEDICINE
+      // PRESCRIBE EACH MEDICINE (via prescriptionService)
       // -------------------------------------------------
 
-      for (const med of validMeds) {
+      const medsPayload = validMeds.map(m => ({ medicine_id: Number(m.medicineId), quantity: Number(m.quantity) }));
 
-        await prescribeMedicine({
-          patientId: Number(editForm.id),
-          medicineId: Number(med.medicineId),
-          quantity: Number(med.quantity),
-          userId: null
-        });
+      // call sequentially for each medicine (backend supports single-item POST)
+      for (const item of medsPayload) {
+        await prescribeMultiple({ patient_id: Number(editForm.id), medicines: [item], user_id: null });
       }
 
       alert(
