@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
-import { getAlerts as apiGetAlerts } from '../../services/api/alertService';
+import { getRoleAlerts } from '../../services/api/alertService';
 import { FaSearch, FaBell, FaExclamationTriangle, FaInfoCircle, FaPlusCircle } from 'react-icons/fa';
 import './PharmacistAlerts.css';
 
@@ -13,18 +13,8 @@ const PharmacistAlerts = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const raw = await apiGetAlerts();
-        const mapped = (Array.isArray(raw) ? raw : []).map(a => ({
-          id: a.Alert_ID,
-          type: a.Severity === 'HIGH' ? 'Critical' : (a.Severity === 'MEDIUM' ? 'Warning' : 'Info'),
-          message: a.Alert_Message,
-          date: a.Alert_Date,
-          category: a.Alert_Category,
-          alert_type: a.Alert_Type
-        }));
-
-        // Filter for medicine-related alerts
-        setAlerts(mapped.filter(a => a.alert_type === 'MEDICINE_STOCK' || a.category === 'MEDICINE'));
+        const data = await getRoleAlerts('pharmacist');
+        setAlerts(data);
       } catch (err) {
         console.error('Failed to load alerts', err);
       }
@@ -38,26 +28,32 @@ const PharmacistAlerts = () => {
   };
 
   const filteredAlerts = alerts.filter(alert =>
-    alert.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    alert.type.toLowerCase().includes(searchQuery.toLowerCase())
+    `${alert.title} ${alert.description} ${alert.severity}`.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getAlertIcon = (type) => {
-    switch (type) {
+  const getAlertIcon = (severity) => {
+    switch (severity) {
       case 'Critical': return <FaPlusCircle className="alert-icon critical" />;
       case 'Warning': return <FaExclamationTriangle className="alert-icon warning" />;
-      case 'Medicine': return <FaInfoCircle className="alert-icon medicine" />;
+      case 'Info': return <FaInfoCircle className="alert-icon medicine" />;
       default: return <FaBell className="alert-icon info" />;
     }
   };
 
-  const getAlertBadgeClass = (type) => {
-    switch (type) {
+  const getAlertBadgeClass = (severity) => {
+    switch (severity) {
       case 'Critical': return 'badge badge-danger';
       case 'Warning': return 'badge badge-warning';
-      case 'Medicine': return 'badge badge-info';
+      case 'Info': return 'badge badge-success';
       default: return 'badge badge-primary';
     }
+  };
+
+  const formatAlertDate = (date) => {
+    if (!date) return 'Recent alert';
+    const value = new Date(date);
+    if (Number.isNaN(value.getTime())) return date;
+    return value.toLocaleString();
   };
 
   return (
@@ -85,17 +81,18 @@ const PharmacistAlerts = () => {
             {filteredAlerts.length > 0 ? (
               <div className="alerts-detailed-list">
                 {filteredAlerts.map(alert => (
-                  <div key={alert.id} className={`alert-detail-card alert-border-${alert.type.toLowerCase()}`}>
+                  <div key={alert.id} className={`alert-detail-card alert-border-${alert.severity.toLowerCase()}`}>
                     <div className="alert-card-left">
-                      {getAlertIcon(alert.type)}
+                      {getAlertIcon(alert.severity)}
                       <div className="alert-card-content">
-                        <p className="alert-card-msg">{alert.message}</p>
-                        <span className="alert-card-timestamp">{alert.date}</span>
+                        <h3 className="alert-card-title">{alert.title}</h3>
+                        <p className="alert-card-msg">{alert.description}</p>
+                        <span className="alert-card-timestamp">{formatAlertDate(alert.date)}</span>
                       </div>
                     </div>
                     <div className="alert-card-right">
-                      <span className={getAlertBadgeClass(alert.type)}>
-                        {alert.type}
+                      <span className={getAlertBadgeClass(alert.severity)}>
+                        {alert.severity}
                       </span>
                     </div>
                   </div>
