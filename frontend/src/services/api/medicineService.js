@@ -34,3 +34,18 @@ export const getMedicineRequirement = async (disease) => {
     `/medicines/requirement/${encodeURIComponent(disease)}`
   );
 };
+
+// PRESCRIBE MEDICINE
+export const prescribeMedicine = async ({
+  patientId,
+  medicineId,
+  quantity,
+  userId
+}) => {
+  return await apiClient(
+    `/prescriptions/?patient_id=${patientId}&medicine_id=${medicineId}&quantity=${quantity}${userId ? `&user_id=${userId}` : ''}`,
+    {
+      method: "POST"
+    }
+  );
+};
