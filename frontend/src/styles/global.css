@@ -294,3 +294,101 @@ input, select, textarea {
     gap: 0;
   }
 }
+
+/* Shared dashboard responsiveness for all role pages */
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 992px) {
+  .dashboard-layout {
+    display: block;
+  }
+
+  .dashboard-main {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+
+  .dashboard-content {
+    padding: 1.5rem !important;
+  }
+
+  .dashboard-view-tabs {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .dashboard-details-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .powerbi-section-wrapper,
+  .dashboard-powerbi-banner {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-content {
+    padding: 1.25rem !important;
+  }
+
+  .dashboard-powerbi-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .db-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .doctor-welcome-panel {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .doctor-welcome-mini-cards {
+    width: 100%;
+  }
+
+  .doctor-mini-card {
+    flex: 1 1 140px;
+  }
+}
+
+@media (max-width: 576px) {
+  .dashboard-content {
+    padding: 1rem !important;
+  }
+
+  .dashboard-view-tabs {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .view-tab-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .table-responsive {
+    overflow-x: auto;
+  }
+
+  .table {
+    min-width: 560px;
+  }
+}

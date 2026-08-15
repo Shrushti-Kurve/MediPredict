@@ -127,7 +127,6 @@ useEffect(() => {
           <section className="doctor-welcome-panel">
             <div>
               <span className="doctor-welcome-kicker">Doctor Workspace</span>
-              <h2>Welcome, Dr. {user?.name || 'Doctor'}</h2>
               <p>Quick access to patients, alerts, medicine stock, and analytics.</p>
             </div>
             <div className="doctor-welcome-mini-cards">

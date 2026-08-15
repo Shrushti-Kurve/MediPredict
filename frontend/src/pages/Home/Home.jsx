@@ -77,9 +77,9 @@ const Home = () => {
             <img src={logo} alt="MediPredict Logo" className="hero-logo" />
           </div>
           <div className="hero-badge">Rural Healthcare System</div>
-          <h1 className="hero-title">A calmer way to manage rural care</h1>
+          <h1 className="hero-title">सर्वे भवन्तु सुखिनः, सर्वे सन्तु   निरामयाः।</h1>
           <p className="hero-subtitle">
-            MediPredict brings alerts, disease forecasting, medicine stock, and patient workspaces together in one place.
+            May everyone be happy, may everyone be free from illness
           </p>
           <div className="hero-buttons">
             <Link to="/signup" className="btn btn-primary hero-btn-get-started">Get Started</Link>
