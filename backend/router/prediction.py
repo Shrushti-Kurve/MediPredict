@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from predict import run_automatic_prediction
 
+
 router = APIRouter(
     prefix="/prediction",
     tags=["Prediction"]

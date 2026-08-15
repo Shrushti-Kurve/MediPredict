@@ -7,6 +7,9 @@ from sqlalchemy import text
 from database import engine
 from stock_alerts import generate_medicine_alerts
 from alert_generator import generate_all_alerts
+from router.alerts import router as alerts_router
+
+
 
 from medicines import (
     router as medicine_router,
@@ -26,6 +29,7 @@ from dashboard import dashboard
 from prescriptions import router as prescription_router
 
 from router.alerts import router as alerts_router
+
 
 
 
@@ -72,6 +76,7 @@ app.include_router(alert_router)
 app.include_router(prediction_router)
 
 app.include_router(alerts_router)
+
 
 
 # =========================================================

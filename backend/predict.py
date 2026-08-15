@@ -950,13 +950,14 @@ def check_trigger():
 
 def calculate_risk(predicted_cases):
 
-    if predicted_cases >= 35:
-        return "DANGER"
+    if predicted_cases > 35:
+        return "HIGH"
 
-    elif predicted_cases >= 30:
+    elif predicted_cases >= 25:
         return "MEDIUM"
 
-    return "LOW"
+    else:
+        return "LOW"
 
 
 # =========================================================
