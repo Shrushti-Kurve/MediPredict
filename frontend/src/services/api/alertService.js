@@ -82,6 +82,6 @@ export const getAlertCount = async () => {
 
 export const generateAlerts = async () => {
   return await apiClient("/alerts/generate", {
-    method: "POST"
+    method: "POST",
   });
 };

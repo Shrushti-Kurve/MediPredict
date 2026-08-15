@@ -7,7 +7,7 @@ import { getRoleAlerts } from "../../services/api/alertService";
 
 const DoctorAlerts = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [alerts, setAlerts] = useState([]);
 
   useEffect(() => {
@@ -57,24 +57,43 @@ const DoctorAlerts = () => {
   };
 
   return (
+
     <div className="dashboard-layout">
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={setSidebarOpen} />
-      
+
+      <Sidebar
+        isOpen={sidebarOpen}
+        toggleSidebar={setSidebarOpen}
+      />
+
       <div className="dashboard-main">
-        <DashboardHeader title="System & Patient Alerts" toggleSidebar={setSidebarOpen} />
-        
+
+        <DashboardHeader
+          title="System & Patient Alerts"
+          toggleSidebar={setSidebarOpen}
+        />
+
         <main className="dashboard-content">
+
+          {/* SEARCH */}
+
           <div className="alerts-page-controls">
+
             <div className="search-bar-wrapper">
+
               <FaSearch className="search-icon" />
+
               <input
                 type="text"
-                placeholder="Search alerts by message or level..."
+                placeholder="Search disease, village or medicine..."
                 className="form-control search-input"
                 value={searchQuery}
-                onChange={handleSearchChange}
+                onChange={(e) =>
+                  setSearchQuery(e.target.value)
+                }
               />
+
             </div>
+
           </div>
 
           <div className="alerts-full-container">
@@ -98,17 +117,101 @@ const DoctorAlerts = () => {
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="alerts-empty-state">
-                <FaBell className="empty-bell" />
-                <h3>No new alerts.</h3>
-                <p>Everything is currently running smoothly.</p>
+
+              <DiseaseSeveritySection
+                title="High"
+                icon={<FaPlusCircle />}
+                alerts={highDisease}
+                className="severity-high"
+              />
+
+              <DiseaseSeveritySection
+                title="Medium"
+                icon={<FaExclamationTriangle />}
+                alerts={mediumDisease}
+                className="severity-medium"
+              />
+
+              <DiseaseSeveritySection
+                title="Low"
+                icon={<FaInfoCircle />}
+                alerts={lowDisease}
+                className="severity-low"
+              />
+
+            </section>
+
+
+            {/* =================================================
+                MEDICINE
+            ================================================= */}
+
+            <section className="alerts-panel medicine-panel">
+
+              <div className="panel-heading">
+
+                <div>
+
+                  <h2>
+                    Medicine Alerts
+                  </h2>
+
+                  <p>
+                    Pharmacy stock monitoring
+                  </p>
+
+                </div>
+
+                <FaCapsules />
+
               </div>
-            )}
+
+              {filteredMedicineAlerts.length > 0 ? (
+
+                <div className="medicine-alert-list">
+
+                  {filteredMedicineAlerts.map(
+                    (alert, index) => (
+
+                      <MedicineCard
+                        key={
+                          alert.Alert_ID ||
+                          alert.alert_id ||
+                          alert.id ||
+                          index
+                        }
+                        alert={alert}
+                      />
+
+                    )
+                  )}
+
+                </div>
+
+              ) : (
+
+                <div className="medicine-empty">
+
+                  <FaBell />
+
+                  <p>
+                    No medicine alerts
+                  </p>
+
+                </div>
+
+              )}
+
+            </section>
+
           </div>
+
         </main>
+
       </div>
+
     </div>
+
   );
 };
 
