@@ -1,20 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
-import { getAlerts } from '../../services/localStorageService';
 import { FaSearch, FaBell, FaExclamationTriangle, FaInfoCircle, FaPlusCircle } from 'react-icons/fa';
 import './HospitalAlerts.css';
+import { getAlerts } from "../../services/api/alertService";
 
 const HospitalAlerts = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [alerts, setAlerts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Filter alerts for hospital staff role
-    const allAlerts = getAlerts();
-    setAlerts(allAlerts.filter(a => a.role === 'hospitalStaff'));
+    loadAlerts();
   }, []);
+
+  const loadAlerts = async () => {
+    try {
+      const data = await getAlerts();
+      setAlerts(data.filter(a => a.role === 'hospitalStaff'));
+    } catch (error) {
+      console.error("Failed to load alerts:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
@@ -24,6 +34,7 @@ const HospitalAlerts = () => {
     alert.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
     alert.type.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
 
   const getAlertIcon = (type) => {
     switch (type) {

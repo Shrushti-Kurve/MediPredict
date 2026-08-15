@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
+import { updatePatient } from "../../services/api/patientService";
 import { 
   getPatients, 
   getMedicines, 
@@ -44,14 +45,64 @@ const DURATION_OPTIONS = [
   'Ongoing (Chronic)'
 ];
 
+const handleDiagnosis = async (
+  patientId,
+  disease,
+  symptoms,
+  doctor,
+  doctorUserId
+) => {
+  try {
+    await updatePatient(patientId, {
+      Disease: disease,
+      Symptoms: symptoms,
+      Doctor: doctor,
+      Doctor_User_ID: doctorUserId,
+    });
+
+    await loadPatients();
+
+    alert("Patient diagnosis updated successfully");
+  } catch (error) {
+    console.error(error);
+
+    alert(
+      error.response?.data?.detail ||
+      "Failed to update patient"
+    );
+  }
+};
+
 const DoctorPatients = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [patients, setPatients] = useState([]);
   const [pharmacyStock, setPharmacyStock] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+
+  const [patients, setPatients] = useState([]);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState("");
+
+useEffect(() => {
+  loadPatients();
+}, []);
+
+const loadPatients = async () => {
+  try {
+    setLoading(true);
+
+    const data = await getPatients();
+
+    setPatients(data);
+  } catch (error) {
+    console.error(error);
+    setError("Unable to load patients");
+  } finally {
+    setLoading(false);
+  }
+};
   
   // Clinical edit form state
   const [editForm, setEditForm] = useState({
