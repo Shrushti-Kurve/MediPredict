@@ -7,6 +7,7 @@ import './styles/global.css';
 
 // Public Pages
 import Home from './pages/Home/Home';
+import NotificationBell from "./components/NotificationBell/NotificationBell";
 import Login from './pages/Login/Login';
 import Signup from './pages/Signup/Signup';
 

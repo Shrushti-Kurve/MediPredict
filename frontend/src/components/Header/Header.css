@@ -191,3 +191,518 @@
     padding: 0.85rem;
   }
 }
+
+/* =========================================================
+   HOMEPAGE NOTIFICATION BELL
+   ========================================================= */
+
+.home-notification-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Bell button */
+.home-notification-button {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(15, 118, 110, 0.08);
+  color: #0f766e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.05rem;
+  transition: all 0.2s ease;
+}
+
+.home-notification-button:hover {
+  background: rgba(15, 118, 110, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Number on bell */
+.home-notification-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+}
+
+/* Popup */
+.home-notification-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 12px);
+  width: 330px;
+  max-width: 85vw;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 15px 40px rgba(15, 23, 42, 0.15);
+  overflow: hidden;
+  z-index: 9999;
+}
+
+/* Popup heading */
+.home-notification-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: rgba(15, 118, 110, 0.05);
+  color: #172033;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border-bottom: 1px solid #edf0f3;
+}
+
+.home-notification-total {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #0f766e;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+}
+
+/* Notification list */
+.home-notification-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* Individual notification */
+.home-notification-item {
+  display: flex;
+  gap: 10px;
+  padding: 13px 15px;
+  border-bottom: 1px solid #edf0f3;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.home-notification-item:hover {
+  background: #f8fafc;
+}
+
+/* Severity dot */
+.home-notification-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.home-notification-high {
+  background: #dc2626;
+}
+
+.home-notification-medium {
+  background: #f97316;
+}
+
+.home-notification-low {
+  background: #22c55e;
+}
+
+/* Text */
+.home-notification-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-notification-copy strong {
+  display: block;
+  color: #172033;
+  font-size: 0.84rem;
+  margin-bottom: 3px;
+}
+
+.home-notification-copy p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.home-notification-copy span {
+  display: block;
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 0.68rem;
+}
+
+/* Empty */
+.home-notification-empty {
+  padding: 25px 15px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .home-notification-panel {
+    right: -60px;
+    width: 300px;
+  }
+
+  .home-notification-button {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* =====================================================
+   HOME PAGE NOTIFICATION
+===================================================== */
+
+.home-notification-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+
+.home-notification-button {
+  position: relative;
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  border-radius: 50%;
+
+  background: rgba(15, 118, 110, 0.08);
+  color: #0f766e;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.home-notification-button:hover {
+  background: rgba(15, 118, 110, 0.15);
+  transform: translateY(-1px);
+}
+
+.home-notification-button svg {
+  font-size: 17px;
+}
+
+.home-notification-count {
+  position: absolute;
+
+  top: -5px;
+  right: -5px;
+
+  min-width: 20px;
+  height: 20px;
+
+  padding: 0 5px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 999px;
+
+  background: #dc2626;
+  color: white;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  border: 2px solid white;
+}
+
+
+/* =====================================================
+   POPUP
+===================================================== */
+
+.home-notification-panel {
+  position: absolute;
+
+  top: calc(100% + 12px);
+  right: 0;
+
+  width: 350px;
+
+  background: rgba(255, 255, 255, 0.98);
+
+  border: 1px solid rgba(15, 118, 110, 0.12);
+
+  border-radius: 16px;
+
+  box-shadow:
+    0 18px 45px rgba(15, 23, 42, 0.15);
+
+  overflow: hidden;
+
+  z-index: 9999;
+}
+
+
+/* =====================================================
+   POPUP HEADER
+===================================================== */
+
+.home-notification-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 15px 17px;
+
+  background: rgba(15, 118, 110, 0.05);
+
+  border-bottom: 1px solid rgba(15, 118, 110, 0.08);
+}
+
+.home-notification-header strong {
+  display: block;
+
+  color: #172033;
+
+  font-size: 15px;
+}
+
+.home-notification-header span {
+  display: block;
+
+  margin-top: 3px;
+
+  color: #7b8494;
+
+  font-size: 11px;
+}
+
+.home-notification-total {
+  display: flex !important;
+
+  align-items: center;
+  justify-content: center;
+
+  min-width: 26px;
+  height: 26px;
+
+  padding: 0 7px;
+
+  margin: 0 !important;
+
+  border-radius: 999px;
+
+  background: #dc2626;
+
+  color: white !important;
+
+  font-size: 11px !important;
+  font-weight: 800;
+}
+
+
+/* =====================================================
+   LIST
+===================================================== */
+
+.home-notification-list {
+  max-height: 330px;
+
+  overflow-y: auto;
+}
+
+
+/* =====================================================
+   INDIVIDUAL ALERT
+===================================================== */
+
+.home-notification-item {
+  width: 100%;
+
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 11px;
+
+  padding: 13px 15px;
+
+  border: none;
+  border-bottom: 1px solid #edf0f3;
+
+  background: white;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition: background 0.2s ease;
+}
+
+.home-notification-item:hover {
+  background: #f8fafc;
+}
+
+
+/* =====================================================
+   DOT
+===================================================== */
+
+.home-notification-dot {
+  width: 9px;
+  height: 9px;
+
+  border-radius: 50%;
+
+  margin-top: 5px;
+
+  flex-shrink: 0;
+}
+
+.home-notification-dot.high {
+  background: #dc2626;
+}
+
+.home-notification-dot.medium {
+  background: #f97316;
+}
+
+
+/* =====================================================
+   CONTENT
+===================================================== */
+
+.home-notification-content {
+  min-width: 0;
+
+  flex: 1;
+}
+
+.home-notification-content strong {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: #1f2937;
+
+  font-size: 12px;
+
+  font-weight: 800;
+}
+
+.home-notification-content p {
+  margin: 0;
+
+  color: #6b7280;
+
+  font-size: 11px;
+
+  line-height: 1.45;
+}
+
+.home-notification-content small {
+  display: block;
+
+  margin-top: 5px;
+
+  color: #9ca3af;
+
+  font-size: 10px;
+}
+
+
+/* =====================================================
+   VIEW ALL
+===================================================== */
+
+.home-view-alerts {
+  width: 100%;
+
+  padding: 12px;
+
+  border: none;
+
+  background: #f0fdfa;
+
+  color: #0f766e;
+
+  font-size: 12px;
+
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.home-view-alerts:hover {
+  background: #ccfbf1;
+}
+
+
+/* =====================================================
+   EMPTY
+===================================================== */
+
+.home-notification-empty {
+  padding: 30px 15px;
+
+  text-align: center;
+
+  color: #9ca3af;
+}
+
+.home-notification-empty svg {
+  font-size: 25px;
+
+  margin-bottom: 8px;
+}
+
+.home-notification-empty p {
+  margin: 0;
+
+  font-size: 12px;
+}
+
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 600px) {
+
+  .home-notification-panel {
+    position: fixed;
+
+    top: calc(var(--header-height) + 8px);
+
+    right: 12px;
+    left: 12px;
+
+    width: auto;
+  }
+
+}
+

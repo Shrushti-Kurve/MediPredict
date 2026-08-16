@@ -69,6 +69,188 @@
   gap: 1.25rem;
 }
 
+/* =========================================================
+   HOMEPAGE NOTIFICATION BELL
+   ========================================================= */
+
+   
+.home-notification-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Bell button */
+.home-notification-button {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(15, 118, 110, 0.08);
+  color: #0f766e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.05rem;
+  transition: all 0.2s ease;
+}
+
+.home-notification-button:hover {
+  background: rgba(15, 118, 110, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Number on bell */
+.home-notification-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+}
+
+/* Popup */
+.home-notification-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 12px);
+  width: 330px;
+  max-width: 85vw;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 15px 40px rgba(15, 23, 42, 0.15);
+  overflow: hidden;
+  z-index: 9999;
+}
+
+/* Popup heading */
+.home-notification-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: rgba(15, 118, 110, 0.05);
+  color: #172033;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border-bottom: 1px solid #edf0f3;
+}
+
+.home-notification-total {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #0f766e;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+}
+
+/* Notification list */
+.home-notification-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* Individual notification */
+.home-notification-item {
+  display: flex;
+  gap: 10px;
+  padding: 13px 15px;
+  border-bottom: 1px solid #edf0f3;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.home-notification-item:hover {
+  background: #f8fafc;
+}
+
+/* Severity dot */
+.home-notification-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.home-notification-high {
+  background: #dc2626;
+}
+
+.home-notification-medium {
+  background: #f97316;
+}
+
+.home-notification-low {
+  background: #22c55e;
+}
+
+/* Text */
+.home-notification-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-notification-copy strong {
+  display: block;
+  color: #172033;
+  font-size: 0.84rem;
+  margin-bottom: 3px;
+}
+
+.home-notification-copy p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.home-notification-copy span {
+  display: block;
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 0.68rem;
+}
+
+/* Empty */
+.home-notification-empty {
+  padding: 25px 15px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .home-notification-panel {
+    right: -60px;
+    width: 300px;
+  }
+
+  .home-notification-button {
+    width: 38px;
+    height: 38px;
+  }
+}
+
 .db-notification-wrapper {
   position: relative;
 }
@@ -285,4 +467,107 @@
   .db-header-title {
     font-size: 1.2rem;
   }
+}
+
+/* =====================================================
+   IMPORTANT ALERT NOTIFICATION
+===================================================== */
+
+.db-notification-button {
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.db-notification-button.has-notifications {
+  animation: notificationPulse 2s infinite;
+}
+
+@keyframes notificationPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.25);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+}
+
+
+/* Notification header */
+
+.db-notification-header {
+  min-height: 58px;
+}
+
+.db-notification-header div {
+  display: flex;
+  flex-direction: column;
+}
+
+.db-notification-header strong {
+  font-size: 0.9rem;
+}
+
+.db-notification-header small {
+  margin-top: 3px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+
+/* Notification item is a button */
+
+.db-notification-item {
+  width: 100%;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s ease;
+}
+
+.db-notification-item:hover {
+  background: rgba(15, 118, 110, 0.06);
+}
+
+
+/* HIGH */
+
+.db-notification-high {
+  background: var(--danger);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.08);
+}
+
+
+/* MEDIUM */
+
+.db-notification-medium {
+  background: var(--warning);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.08);
+}
+
+
+/* Empty */
+
+.db-notification-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+
+.db-notification-empty svg {
+  font-size: 20px;
+  opacity: 0.5;
+}
+
+.db-notification-empty p {
+  margin: 0;
 }

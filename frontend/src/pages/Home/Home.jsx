@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Header from '../../components/Header/Header';
 import Footer from '../../components/Footer/Footer';
 import logo from '../../assets/logo/logo.png';
+import NotificationBell from "../../components/NotificationBell/NotificationBell";
 import {
   FaBell,
   FaChartLine,
@@ -68,6 +69,7 @@ const Home = () => {
   return (
     <div className="home-page-wrapper">
       <Header />
+      
 
       <section className="hero-section" id="hero">
         <div className="hero-glow hero-glow-left" />

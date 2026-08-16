@@ -5,6 +5,7 @@ import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
 import PowerBIEmbed from '../../components/PowerBIEmbed/PowerBIEmbed';
 import { getLoggedInUser } from '../../services/localStorageService';
 import { getPatients as apiGetPatients } from '../../services/api/patientService';
+import NotificationBell from "../../components/NotificationBell/NotificationBell";
 import {
   getAlerts,
   generateAlerts

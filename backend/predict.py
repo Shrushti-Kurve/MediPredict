@@ -972,7 +972,8 @@ def create_disease_alert(
     risk
 ):
 
-    if risk == "DANGER":
+    # Use the actual risk level as severity
+    if risk == "HIGH":
         severity = "HIGH"
 
     elif risk == "MEDIUM":
@@ -1398,7 +1399,7 @@ def run_automatic_prediction():
                 )
 
                 # ALERT ONLY FOR MEDIUM / DANGER
-                if risk in ("MEDIUM", "DANGER"):
+                if risk in ("HIGH", "MEDIUM"):
                     create_disease_alert(
                         connection,
                         disease,
