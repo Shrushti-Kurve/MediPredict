@@ -1,180 +1,394 @@
-/* =========================================================
-   HOMEPAGE NOTIFICATION BELL
-   ========================================================= */
-
-.home-notification-wrapper {
+.notification-wrapper {
   position: relative;
-  display: flex;
-  align-items: center;
-}
-
-/* Bell button */
-.home-notification-button {
-  position: relative;
-  width: 42px;
-  height: 42px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(15, 118, 110, 0.08);
-  color: #0f766e;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  font-size: 1.05rem;
-  transition: all 0.2s ease;
-}
-
-.home-notification-button:hover {
-  background: rgba(15, 118, 110, 0.15);
-  transform: translateY(-1px);
-}
-
-/* Number on bell */
-.home-notification-count {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: #dc2626;
-  color: white;
-  font-size: 0.68rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid white;
-}
-
-/* Popup */
-.home-notification-panel {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 12px);
-  width: 330px;
-  max-width: 85vw;
-  background: rgba(255, 255, 255, 0.98);
-  border: 1px solid rgba(15, 118, 110, 0.12);
-  border-radius: 16px;
-  box-shadow: 0 15px 40px rgba(15, 23, 42, 0.15);
-  overflow: hidden;
   z-index: 9999;
 }
 
-/* Popup heading */
-.home-notification-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  background: rgba(15, 118, 110, 0.05);
-  color: #172033;
-  font-size: 0.9rem;
-  font-weight: 700;
-  border-bottom: 1px solid #edf0f3;
-}
 
-.home-notification-total {
-  min-width: 24px;
-  height: 24px;
-  padding: 0 7px;
-  border-radius: 999px;
-  background: #0f766e;
-  color: white;
+/* =========================================================
+   BELL
+========================================================= */
+
+.notification-bell-button {
+  position: relative;
+
+  width: 58px;
+  height: 58px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: #e4efeb;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
-}
 
-/* Notification list */
-.home-notification-list {
-  max-height: 320px;
-  overflow-y: auto;
-}
-
-/* Individual notification */
-.home-notification-item {
-  display: flex;
-  gap: 10px;
-  padding: 13px 15px;
-  border-bottom: 1px solid #edf0f3;
   cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.notification-bell-button:hover {
+  transform: scale(1.05);
+  background: #d7e9e4;
+}
+
+.notification-bell-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+
+/* =========================================================
+   COUNT
+========================================================= */
+
+.notification-count {
+  position: absolute;
+
+  top: -7px;
+  right: -5px;
+
+  min-width: 29px;
+  height: 29px;
+
+  padding: 0 7px;
+
+  border-radius: 20px;
+
+  background: #ef2929;
+  color: white;
+
+  border: 3px solid white;
+
+  font-size: 13px;
+  font-weight: 800;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* =========================================================
+   POPUP
+========================================================= */
+
+.notification-popup {
+  position: absolute;
+
+  top: 68px;
+  right: -20px;
+
+  width: 520px;
+  max-width: calc(100vw - 30px);
+
+  background: white;
+
+  border-radius: 20px;
+
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.20),
+    0 5px 15px rgba(0, 0, 0, 0.08);
+
+  overflow: hidden;
+
+  border: 1px solid #e3e9e7;
+
+  z-index: 10000;
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.notification-popup-header {
+  min-height: 105px;
+
+  padding: 22px 25px;
+
+  background: #f1f8f6;
+
+  border-bottom: 1px solid #e0e8e5;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notification-popup-header h2 {
+  margin: 0;
+
+  color: #087f79;
+
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.notification-popup-header p {
+  margin: 8px 0 0;
+
+  color: #61728c;
+
+  font-size: 15px;
+}
+
+.notification-header-count {
+  width: 46px;
+  height: 46px;
+
+  border-radius: 50%;
+
+  background: #087f79;
+  color: white;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: 800;
+  font-size: 17px;
+}
+
+
+/* =========================================================
+   LIST
+========================================================= */
+
+.notification-list {
+  max-height: 430px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+
+/* =========================================================
+   ALERT ITEM
+========================================================= */
+
+.notification-item {
+  width: 100%;
+
+  border: none;
+
+  background: white;
+
+  text-align: left;
+
+  padding: 17px 23px;
+
+  border-bottom: 1px solid #edf1f0;
+
+  cursor: pointer;
+
   transition: background 0.2s ease;
 }
 
-.home-notification-item:hover {
-  background: #f8fafc;
+.notification-item:hover {
+  background: #f5faf8;
 }
 
-/* Severity dot */
-.home-notification-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  margin-top: 5px;
-  flex-shrink: 0;
+.notification-item-top {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 15px;
+
+  margin-bottom: 7px;
 }
 
-.home-notification-high {
-  background: #dc2626;
+.notification-item-top strong {
+  color: #17324d;
+
+  font-size: 17px;
+
+  font-weight: 800;
 }
 
-.home-notification-medium {
-  background: #f97316;
+.notification-severity {
+  padding: 5px 10px;
+
+  border-radius: 20px;
+
+  background: #edf1f0;
+
+  color: #526273;
+
+  font-size: 11px;
+
+  font-weight: 800;
 }
 
-.home-notification-low {
-  background: #22c55e;
+
+/* =========================================================
+   SEVERITY
+========================================================= */
+
+.severity-high {
+  border-left: 5px solid #e53935;
 }
 
-/* Text */
-.home-notification-copy {
-  flex: 1;
-  min-width: 0;
+.severity-medium {
+  border-left: 5px solid #f39c12;
 }
 
-.home-notification-copy strong {
-  display: block;
-  color: #172033;
-  font-size: 0.84rem;
-  margin-bottom: 3px;
+.severity-low {
+  border-left: 5px solid #219653;
 }
 
-.home-notification-copy p {
-  margin: 0;
-  color: #64748b;
-  font-size: 0.74rem;
-  line-height: 1.4;
+
+/* =========================================================
+   MESSAGE
+========================================================= */
+
+.notification-item-message {
+  color: #53657c;
+
+  font-size: 14px;
+
+  line-height: 1.5;
+
+  margin-bottom: 8px;
 }
 
-.home-notification-copy span {
-  display: block;
-  margin-top: 4px;
-  color: #94a3b8;
-  font-size: 0.68rem;
+
+/* =========================================================
+   DETAILS
+========================================================= */
+
+.notification-item-details {
+  display: flex;
+
+  gap: 15px;
+
+  flex-wrap: wrap;
+
+  color: #8290a2;
+
+  font-size: 12px;
 }
 
-/* Empty */
-.home-notification-empty {
-  padding: 25px 15px;
+
+/* =========================================================
+   EMPTY
+========================================================= */
+
+.notification-empty {
+  min-height: 180px;
+
+  padding: 30px 20px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
   text-align: center;
-  color: #94a3b8;
-  font-size: 0.8rem;
 }
 
-/* Mobile */
+.notification-empty-icon {
+  font-size: 40px;
+
+  margin-bottom: 10px;
+
+  opacity: 0.55;
+}
+
+.notification-empty h3 {
+  margin: 0 0 6px;
+
+  color: #50627a;
+
+  font-size: 17px;
+}
+
+.notification-empty p {
+  margin: 0;
+
+  color: #8a98aa;
+
+  font-size: 14px;
+}
+
+.notification-loading {
+  color: #087f79;
+
+  font-size: 15px;
+
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.notification-popup-footer {
+  padding: 15px 20px;
+
+  border-top: 1px solid #e5ebe9;
+
+  background: #fafdfc;
+}
+
+.view-all-alerts-button {
+  width: 100%;
+
+  padding: 13px 16px;
+
+  border: none;
+
+  border-radius: 10px;
+
+  background: #087f79;
+
+  color: white;
+
+  font-size: 15px;
+
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.view-all-alerts-button:hover {
+  background: #066963;
+
+  transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
 @media (max-width: 600px) {
-  .home-notification-panel {
-    right: -60px;
-    width: 300px;
+
+  .notification-popup {
+    right: -100px;
+
+    width: calc(100vw - 20px);
+
+    max-width: 500px;
   }
 
-  .home-notification-button {
-    width: 38px;
-    height: 38px;
+  .notification-popup-header {
+    padding: 18px;
   }
+
+  .notification-item {
+    padding: 15px;
+  }
+
 }

@@ -56,14 +56,14 @@ export const getMedicineRequirement = async (disease) => {
 
 export const prescribeMedicine = async ({
   patientId,
-  medicineId,
+  medicineName,
   quantity,
   userId
 }) => {
 
   const params = new URLSearchParams({
     patient_id: patientId,
-    medicine_id: medicineId,
+    medicine_name: medicineName,
     quantity: quantity,
     user_id: userId ?? ""
   });

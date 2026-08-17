@@ -571,3 +571,485 @@
 .db-notification-empty p {
   margin: 0;
 }
+
+/* =========================================================
+   MEDIPREDICT ALERT POPUP - FIXED
+   ========================================================= */
+
+.db-notification-wrapper {
+  position: relative;
+  z-index: 99999;
+}
+
+
+/* =========================================================
+   BELL
+   ========================================================= */
+
+.db-notification-button {
+  position: relative;
+  width: 44px;
+  height: 44px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  outline: none;
+  border-radius: 50%;
+
+  background: rgba(15, 118, 110, 0.08);
+  color: #0f172a;
+
+  cursor: pointer;
+
+  font-size: 18px;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.db-notification-button:hover {
+  background: rgba(15, 118, 110, 0.16);
+  transform: translateY(-1px);
+}
+
+
+.db-notification-button.has-notifications {
+  box-shadow:
+    0 0 0 4px rgba(220, 38, 38, 0.10);
+
+  animation: medipredictBellPulse 2s infinite;
+}
+
+
+@keyframes medipredictBellPulse {
+
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(220, 38, 38, 0.25);
+  }
+
+  70% {
+    box-shadow:
+      0 0 0 8px rgba(220, 38, 38, 0);
+  }
+
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(220, 38, 38, 0);
+  }
+
+}
+
+
+/* =========================================================
+   NOTIFICATION COUNT
+   ========================================================= */
+
+.db-notification-count {
+  position: absolute;
+
+  top: -4px;
+  right: -4px;
+
+  min-width: 21px;
+  height: 21px;
+
+  padding: 0 5px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 999px;
+
+  background: #dc2626;
+  color: white;
+
+  border: 2px solid white;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  z-index: 5;
+}
+
+
+/* =========================================================
+   POPUP
+   ========================================================= */
+
+.db-notification-panel {
+  position: absolute;
+
+  right: 0;
+  top: calc(100% + 14px);
+
+  width: 380px;
+  max-width: 90vw;
+
+  background: #ffffff;
+
+  border: 1px solid #dbe5e7;
+  border-radius: 16px;
+
+  box-shadow:
+    0 20px 50px rgba(15, 23, 42, 0.20);
+
+  overflow: hidden;
+
+  z-index: 999999;
+
+  animation:
+    medipredictNotificationOpen
+    0.18s ease-out;
+}
+
+
+@keyframes medipredictNotificationOpen {
+
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.db-notification-header {
+  min-height: 64px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 14px 16px;
+
+  background: #f0fdfa;
+
+  border-bottom:
+    1px solid #dbe5e7;
+
+  color: #0f172a;
+}
+
+
+.db-notification-header > div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+
+.db-notification-header strong {
+  display: block;
+
+  color: #0f172a;
+
+  font-size: 15px;
+  font-weight: 800;
+}
+
+
+.db-notification-header small {
+  display: block;
+
+  color: #64748b;
+
+  font-size: 11px;
+  font-weight: 500;
+}
+
+
+.db-notification-close {
+  width: 30px;
+  height: 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 50%;
+
+  background: transparent;
+
+  color: #64748b;
+
+  cursor: pointer;
+}
+
+
+.db-notification-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+
+/* =========================================================
+   ALERT LIST
+   ========================================================= */
+
+.db-notification-list {
+  max-height: 390px;
+
+  overflow-y: auto;
+
+  background: #ffffff;
+}
+
+
+/* =========================================================
+   INDIVIDUAL ALERT
+   ========================================================= */
+
+.db-notification-item {
+  width: 100%;
+
+  display: flex;
+
+  gap: 12px;
+
+  padding: 15px 16px;
+
+  background: #ffffff;
+
+  border: none;
+  border-bottom:
+    1px solid #edf2f7;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  font-family: inherit;
+
+  transition:
+    background 0.18s ease;
+}
+
+
+.db-notification-item:hover {
+  background: #f8fafc;
+}
+
+
+/* =========================================================
+   SEVERITY DOT
+   ========================================================= */
+
+.db-notification-dot {
+  width: 10px;
+  height: 10px;
+
+  margin-top: 5px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+}
+
+
+.db-notification-high {
+  background: #dc2626;
+
+  box-shadow:
+    0 0 0 4px rgba(220, 38, 38, 0.10);
+}
+
+
+.db-notification-medium {
+  background: #f59e0b;
+
+  box-shadow:
+    0 0 0 4px rgba(245, 158, 11, 0.10);
+}
+
+
+.db-notification-low {
+  background: #16a34a;
+}
+
+
+/* =========================================================
+   ALERT TEXT
+   ========================================================= */
+
+.db-notification-copy {
+  flex: 1;
+
+  min-width: 0;
+}
+
+
+.db-notification-copy strong {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: #0f172a !important;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  line-height: 1.3;
+}
+
+
+.db-notification-copy p {
+  margin: 0 0 6px 0;
+
+  color: #475569 !important;
+
+  font-size: 12px;
+  line-height: 1.5;
+
+  white-space: normal;
+  word-break: break-word;
+}
+
+
+.db-notification-copy span {
+  display: block;
+
+  color: #64748b !important;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+}
+
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.db-notification-empty {
+  min-height: 150px;
+
+  padding: 30px 20px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  text-align: center;
+
+  color: #64748b;
+}
+
+
+.db-notification-empty svg {
+  color: #f59e0b;
+
+  font-size: 24px;
+
+  margin-bottom: 5px;
+}
+
+
+.db-notification-empty strong {
+  color: #0f172a;
+
+  font-size: 14px;
+}
+
+
+.db-notification-empty p {
+  margin: 0;
+
+  color: #64748b;
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.db-notification-footer {
+  padding: 12px 14px;
+
+  background: #f8fafc;
+
+  border-top:
+    1px solid #e2e8f0;
+}
+
+
+/* =========================================================
+   VIEW ALL ALERTS BUTTON
+   ========================================================= */
+
+.db-view-all-alerts {
+  width: 100%;
+
+  min-height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #0f766e;
+  color: #ffffff;
+
+  font-size: 13px;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+
+.db-view-all-alerts:hover {
+  background: #115e59;
+
+  transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+  .db-notification-panel {
+    position: fixed;
+
+    top: 72px;
+    right: 10px;
+    left: 10px;
+
+    width: auto;
+    max-width: none;
+  }
+
+}

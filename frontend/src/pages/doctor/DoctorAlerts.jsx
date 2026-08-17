@@ -21,6 +21,14 @@ const DoctorAlerts = () => {
 
   useEffect(() => {
     loadAlerts();
+    // Mark alerts as acknowledged/read so notification bell clears when user views alerts
+    import("../../services/api/alertService").then(({ ackAllAlerts }) => {
+      try {
+        ackAllAlerts();
+      } catch (e) {
+        // ignore
+      }
+    });
   }, []);
 
   const loadAlerts = async () => {

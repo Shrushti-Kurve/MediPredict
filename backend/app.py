@@ -105,6 +105,40 @@ def predict(
     )
 
 
+# -----------------------
+# Background scheduler
+# -----------------------
+import threading
+import time
+from config import SCHEDULER_INTERVAL_MINUTES
+
+stop_scheduler = threading.Event()
+
+def _scheduler_loop():
+    interval = max(1, int(SCHEDULER_INTERVAL_MINUTES)) * 60
+    # run initial job shortly after startup
+    time.sleep(5)
+    while not stop_scheduler.is_set():
+        try:
+            predict_outbreak()
+        except Exception as e:
+            print('Scheduler prediction error:', e)
+
+        # wait for next run or stop
+        stop_scheduler.wait(interval)
+
+
+@app.on_event('startup')
+def start_background_scheduler():
+    thread = threading.Thread(target=_scheduler_loop, daemon=True)
+    thread.start()
+
+
+@app.on_event('shutdown')
+def stop_background_scheduler():
+    stop_scheduler.set()
+
+
 # =========================================================
 # MEDICINE REQUIREMENT
 # =========================================================

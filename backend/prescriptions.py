@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime
+from typing import Optional, List, Dict, Any
 
-from database import get_db
+from database import get_db, engine
+from sqlalchemy import text as sa_text
 
 
 router = APIRouter(
@@ -12,395 +14,214 @@ router = APIRouter(
 )
 
 
-# =========================================================
-# DOCTOR → PRESCRIBE MEDICINE
-# =========================================================
+def ensure_prescriptions_table():
+    create_sql = sa_text("""
+    CREATE TABLE IF NOT EXISTS prescriptions (
+        Prescription_ID INT AUTO_INCREMENT PRIMARY KEY,
+        Patient_ID INT,
+        Patient_Name VARCHAR(255),
+        Medicine_Name VARCHAR(255),
+        Quantity INT,
+        User_ID INT NULL,
+        Prescription_Date DATETIME
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """)
+
+    with engine.begin() as conn:
+        conn.execute(create_sql)
+
+
+try:
+    ensure_prescriptions_table()
+except Exception:
+    pass
+
 
 @router.post("/")
 def prescribe_medicine(
     patient_id: int,
-    medicine_id: int,
-    quantity: int,
-    user_id: int = None,
+    medicine_name: str,
+    quantity: int = 1,
+    user_id: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-
-    # -----------------------------------------------------
-    # Validate quantity
-    # -----------------------------------------------------
-
     if quantity <= 0:
+        raise HTTPException(status_code=400, detail="Quantity must be greater than 0")
 
-        raise HTTPException(
-            status_code=400,
-            detail="Quantity must be greater than 0"
-        )
+    if not medicine_name or not medicine_name.strip():
+        raise HTTPException(status_code=400, detail="Medicine name is required")
 
+    # normalize user_id
+    if user_id is None or str(user_id).strip() == "":
+        user_id_val = None
+    else:
+        try:
+            user_id_val = int(user_id)
+        except Exception:
+            user_id_val = None
 
-    # -----------------------------------------------------
-    # Check patient
-    # -----------------------------------------------------
-
-    patient_query = text("""
-        SELECT
-            Patient_ID,
-            Patient_Name,
-            Disease,
-            Village
+    # load patient
+    patient_q = text("""
+        SELECT Patient_ID, Patient_Name, Disease, Village
         FROM patients
-        WHERE Patient_ID = :patient_id
+        WHERE Patient_ID = :pid
     """)
 
-    patient = db.execute(
-        patient_query,
-        {
-            "patient_id": patient_id
-        }
-    ).mappings().first()
-
+    patient = db.execute(patient_q, {"pid": patient_id}).mappings().first()
 
     if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
 
-        raise HTTPException(
-            status_code=404,
-            detail="Patient not found"
-        )
-
-
-    # -----------------------------------------------------
-    # Check medicine
-    # -----------------------------------------------------
-
-    medicine_query = text("""
-        SELECT
-            Medicine_ID,
-            Medicine_Name,
-            Current_Stock,
-            Reorder_Level,
-            Stock_Status,
-            Expiry_Date
+    # find medicine in inventory (optional)
+    med_q = text("""
+        SELECT Medicine_ID, Medicine_Name, Current_Stock
         FROM medicines
-        WHERE Medicine_ID = :medicine_id
+        WHERE LOWER(TRIM(Medicine_Name)) = LOWER(TRIM(:mname))
+        LIMIT 1
     """)
 
-    medicine = db.execute(
-        medicine_query,
-        {
-            "medicine_id": medicine_id
-        }
-    ).mappings().first()
+    med = db.execute(med_q, {"mname": medicine_name}).mappings().first()
 
+    try:
+        # insert prescription
+        ins = text("""
+            INSERT INTO prescriptions
+            (Patient_ID, Patient_Name, Medicine_Name, Quantity, User_ID, Prescription_Date)
+            VALUES
+            (:patient_id, :patient_name, :medicine_name, :quantity, :user_id, NOW())
+        """)
 
-    if not medicine:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Medicine not found"
-        )
-
-
-    # -----------------------------------------------------
-    # CHECK EXPIRY
-    # -----------------------------------------------------
-
-    if medicine["Expiry_Date"]:
-
-        if medicine["Expiry_Date"] < datetime.now().date():
-
-            raise HTTPException(
-                status_code=400,
-                detail=f"{medicine['Medicine_Name']} is expired"
-            )
-
-
-    # -----------------------------------------------------
-    # CHECK STOCK
-    # -----------------------------------------------------
-
-    current_stock = medicine["Current_Stock"] or 0
-
-
-    if current_stock < quantity:
-
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "message": "Medicine not available in sufficient quantity",
-                "medicine": medicine["Medicine_Name"],
-                "available_stock": current_stock,
-                "requested_quantity": quantity
-            }
-        )
-
-
-    # -----------------------------------------------------
-    # DEDUCT MEDICINE
-    # -----------------------------------------------------
-
-    new_stock = current_stock - quantity
-
-
-    if new_stock <= 0:
-
-        new_status = "OUT_OF_STOCK"
-
-    elif new_stock <= (medicine["Reorder_Level"] or 0):
-
-        new_status = "LOW"
-
-    else:
-
-        new_status = "AVAILABLE"
-
-
-    update_query = text("""
-        UPDATE medicines
-
-        SET
-            Current_Stock = :new_stock,
-            Stock_Status = :new_status
-
-        WHERE Medicine_ID = :medicine_id
-    """)
-
-
-    db.execute(
-        update_query,
-        {
-            "new_stock": new_stock,
-
-            "new_status": new_status,
-
-            "medicine_id": medicine_id
-        }
-    )
-
-
-    # -----------------------------------------------------
-    # ADD TRANSACTION
-    # -----------------------------------------------------
-
-    transaction_query = text("""
-        INSERT INTO medicine_transactions
-        (
-            Patient_ID,
-            Medicine_ID,
-            Quantity,
-            Transaction_Type,
-            Transaction_Date,
-            User_ID
-        )
-
-        VALUES
-        (
-            :patient_id,
-            :medicine_id,
-            :quantity,
-            'DISPENSE',
-            CURDATE(),
-            :user_id
-        )
-    """)
-
-
-    db.execute(
-        transaction_query,
-        {
+        db.execute(ins, {
             "patient_id": patient_id,
-
-            "medicine_id": medicine_id,
-
+            "patient_name": patient["Patient_Name"],
+            "medicine_name": medicine_name,
             "quantity": quantity,
+            "user_id": user_id_val
+        })
 
-            "user_id": user_id
-        }
-    )
+        # if medicine exists, record transaction (do not deduct stock)
+        if med:
+            try:
+                trans = text("""
+                    INSERT INTO medicine_transactions
+                    (Patient_ID, Medicine_ID, Quantity, Transaction_Type, Transaction_Date, User_ID)
+                    VALUES
+                    (:patient_id, :medicine_id, :quantity, 'PRESCRIPTION', CURDATE(), :user_id)
+                """)
 
+                db.execute(trans, {
+                    "patient_id": patient_id,
+                    "medicine_id": med["Medicine_ID"],
+                    "quantity": quantity,
+                    "user_id": user_id_val
+                })
+            except Exception:
+                pass
 
-    # -----------------------------------------------------
-    # GENERATE STOCK ALERT
-    # -----------------------------------------------------
+        db.commit()
 
-    alert_id = None
-
-
-    if new_status == "LOW":
-
-        alert_query = text("""
-            INSERT INTO alerts
-            (
-                Medicine_ID,
-                Disease,
-                Village,
-                Alert_Type,
-                Severity,
-                Alert_Category,
-                Alert_Message,
-                Alert_Date,
-                Status
-            )
-
-            VALUES
-            (
-                :medicine_id,
-                :disease,
-                :village,
-                'MEDICINE_STOCK',
-                'MEDIUM',
-                'MEDICINE',
-                :message,
-                NOW(),
-                'Active'
-            )
-        """)
-
-
-        result = db.execute(
-            alert_query,
-            {
-                "medicine_id": medicine_id,
-
-                "disease": patient["Disease"],
-
-                "village": patient["Village"],
-
-                "message":
-                    f"{medicine['Medicine_Name']} stock is low. "
-                    f"Only {new_stock} units remaining."
-            }
-        )
-
-        alert_id = result.lastrowid
-
-
-    elif new_status == "OUT_OF_STOCK":
-
-        alert_query = text("""
-            INSERT INTO alerts
-            (
-                Medicine_ID,
-                Disease,
-                Village,
-                Alert_Type,
-                Severity,
-                Alert_Category,
-                Alert_Message,
-                Alert_Date,
-                Status
-            )
-
-            VALUES
-            (
-                :medicine_id,
-                :disease,
-                :village,
-                'MEDICINE_STOCK',
-                'HIGH',
-                'MEDICINE',
-                :message,
-                NOW(),
-                'Active'
-            )
-        """)
-
-
-        result = db.execute(
-            alert_query,
-            {
-                "medicine_id": medicine_id,
-
-                "disease": patient["Disease"],
-
-                "village": patient["Village"],
-
-                "message":
-                    f"{medicine['Medicine_Name']} is OUT OF STOCK."
-            }
-        )
-
-        alert_id = result.lastrowid
-
-
-    # -----------------------------------------------------
-    # CREATE NOTIFICATIONS FOR ALL USERS
-    # -----------------------------------------------------
-
-    if alert_id:
-
-        notification_query = text("""
-            INSERT INTO notifications
-            (
-                Alert_ID,
-                User_ID,
-                Title,
-                Message,
-                Severity,
-                Is_Read,
-                Created_At
-            )
-
-            SELECT
-                :alert_id,
-                User_ID,
-                :title,
-                :message,
-                :severity,
-                0,
-                NOW()
-
-            FROM users
-        """)
-
-
-        db.execute(
-            notification_query,
-            {
-                "alert_id": alert_id,
-
-                "title":
-                    f"Medicine {new_status}",
-
-                "message":
-                    f"{medicine['Medicine_Name']} "
-                    f"stock status is {new_status}. "
-                    f"Remaining stock: {new_stock}",
-
-                "severity":
-                    "MEDIUM"
-                    if new_status == "LOW"
-                    else "HIGH"
-            }
-        )
-
-
-    # -----------------------------------------------------
-    # SAVE EVERYTHING
-    # -----------------------------------------------------
-
-    db.commit()
-
-
-    # -----------------------------------------------------
-    # RESPONSE
-    # -----------------------------------------------------
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Unable to save prescription: {str(e)}")
 
     return {
-
         "status": "success",
-
-        "message": "Medicine prescribed successfully",
-
-        "patient": patient["Patient_Name"],
-
-        "medicine": medicine["Medicine_Name"],
-
-        "quantity_dispensed": quantity,
-
-        "remaining_stock": new_stock,
-
-        "stock_status": new_status,
-
-        "alert_generated":
-            alert_id is not None
-
+        "message": "Prescription saved successfully",
+        "patient": {
+            "Patient_ID": patient["Patient_ID"],
+            "Patient_Name": patient["Patient_Name"],
+            "Disease": patient["Disease"],
+            "Village": patient["Village"]
+        },
+        "medicine": medicine_name,
+        "quantity": quantity,
+        "medicine_found_in_inventory": bool(med),
     }
+
+
+@router.post('/bulk')
+def prescribe_bulk(payload: Dict[str, Any], db: Session = Depends(get_db)):
+    # payload: { patient_id: int, medicines: [{medicine_name, quantity}], user_id: optional }
+    patient_id = payload.get('patient_id')
+    medicines = payload.get('medicines') or []
+    user_id_raw = payload.get('user_id')
+
+    if not patient_id:
+        raise HTTPException(status_code=400, detail='patient_id is required')
+
+    if not isinstance(medicines, list) or len(medicines) == 0:
+        raise HTTPException(status_code=400, detail='medicines list required')
+
+    if user_id_raw is None or str(user_id_raw).strip() == '':
+        user_id_val = None
+    else:
+        try:
+            user_id_val = int(user_id_raw)
+        except Exception:
+            user_id_val = None
+
+    patient_q = text("""
+        SELECT Patient_ID, Patient_Name, Disease, Village
+        FROM patients
+        WHERE Patient_ID = :pid
+    """)
+
+    patient = db.execute(patient_q, {"pid": patient_id}).mappings().first()
+
+    if not patient:
+        raise HTTPException(status_code=404, detail='Patient not found')
+
+    try:
+        for item in medicines:
+            med_name = (item.get('medicine_name') or item.get('name') or '').strip()
+            qty = int(item.get('quantity') or item.get('qty') or 1)
+
+            if not med_name:
+                continue
+
+            ins = text("""
+                INSERT INTO prescriptions
+                (Patient_ID, Patient_Name, Medicine_Name, Quantity, User_ID, Prescription_Date)
+                VALUES (:patient_id, :patient_name, :medicine_name, :quantity, :user_id, NOW())
+            """)
+
+            db.execute(ins, {
+                "patient_id": patient_id,
+                "patient_name": patient['Patient_Name'],
+                "medicine_name": med_name,
+                "quantity": qty,
+                "user_id": user_id_val
+            })
+
+            med_q = text("""
+                SELECT Medicine_ID
+                FROM medicines
+                WHERE LOWER(TRIM(Medicine_Name)) = LOWER(TRIM(:mname))
+                LIMIT 1
+            """)
+
+            med = db.execute(med_q, {"mname": med_name}).mappings().first()
+
+            if med:
+                try:
+                    trans = text("""
+                        INSERT INTO medicine_transactions
+                        (Patient_ID, Medicine_ID, Quantity, Transaction_Type, Transaction_Date, User_ID)
+                        VALUES (:patient_id, :medicine_id, :quantity, 'PRESCRIPTION', CURDATE(), :user_id)
+                    """)
+
+                    db.execute(trans, {
+                        "patient_id": patient_id,
+                        "medicine_id": med['Medicine_ID'],
+                        "quantity": qty,
+                        "user_id": user_id_val
+                    })
+                except Exception:
+                    pass
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f'Unable to save prescriptions: {str(e)}')
+
+    return {"status": "success", "message": "Prescriptions saved", "patient_id": patient_id}

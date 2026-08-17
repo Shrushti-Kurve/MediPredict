@@ -11,6 +11,7 @@ router = APIRouter(
 @router.get("/")
 def get_alerts():
 
+    # Return only recent active alerts (last 30 days) and prioritize by severity
     query = text("""
         SELECT
             Alert_ID,
@@ -26,6 +27,7 @@ def get_alerts():
         FROM alerts
         WHERE Status = 'Active'
           AND Severity IN ('HIGH', 'MEDIUM')
+          AND Alert_Date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         ORDER BY
             CASE
                 WHEN Severity = 'HIGH' THEN 1
@@ -60,3 +62,50 @@ def get_alert_count():
     return {
         "count": result["total"] if result else 0
     }
+
+
+@router.put("/{alert_id}/dismiss")
+def dismiss_alert(alert_id: int):
+
+    query = text("""
+        UPDATE alerts
+        SET Status = 'Inactive'
+        WHERE Alert_ID = :alert_id
+    """)
+
+    with engine.connect() as connection:
+        connection.execute(query, {"alert_id": alert_id})
+
+    return {"status": "ok", "alert_id": alert_id}
+
+
+@router.post("/ack_all")
+def acknowledge_all_alerts():
+
+    query = text("""
+        UPDATE alerts
+        SET Status = 'Inactive'
+        WHERE Status = 'Active'
+          AND Severity IN ('HIGH','MEDIUM')
+    """)
+
+    with engine.connect() as connection:
+        connection.execute(query)
+
+    return {"status": "ok", "updated": True}
+
+
+@router.get("/ack_all")
+def acknowledge_all_alerts_get():
+    # same behaviour as POST /ack_all — allow GET for compatibility
+    query = text("""
+        UPDATE alerts
+        SET Status = 'Inactive'
+        WHERE Status = 'Active'
+          AND Severity IN ('HIGH','MEDIUM')
+    """)
+
+    with engine.connect() as connection:
+        connection.execute(query)
+
+    return {"status": "ok", "updated": True}

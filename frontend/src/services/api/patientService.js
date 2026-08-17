@@ -27,8 +27,9 @@ export const updatePatient = async (patientId, patientData) => {
 };
 
 // DELETE PATIENT
-export const deletePatient = async (patientId) => {
-  return await apiClient(`/patients/${patientId}`, {
+export const deletePatient = async (patientId, force = false) => {
+  const qs = force ? '?force=true' : '';
+  return await apiClient(`/patients/${patientId}${qs}`, {
     method: "DELETE",
   });
 };

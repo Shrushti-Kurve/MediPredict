@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
 
-import { getPatients, updatePatient } from '../../services/api/patientService';
-import {
-  getMedicines
-} from '../../services/api/medicineService';
+import { getPatients, updatePatient, deletePatient } from '../../services/api/patientService';
+import { getMedicines } from '../../services/api/medicineService';
 import { prescribeMultiple } from '../../services/api/prescriptionService';
 import {
   FaSearch,
@@ -238,6 +236,26 @@ const DoctorPatients = () => {
 
       return updated;
     });
+
+    // If the doctor typed a medicine name, check pharmacy stock and warn if out of stock
+    if (field === 'name' && value && value.trim() !== '') {
+      const match = pharmacyStock.find(
+        m => String(m.Medicine_Name).toLowerCase() === String(value).toLowerCase()
+      );
+
+      if (match && (match.Current_Stock === 0 || Number(match.Current_Stock) <= 0)) {
+        const proceed = window.confirm(`${match.Medicine_Name} appears to be OUT OF STOCK. Proceed with prescription anyway?`);
+
+        if (!proceed) {
+          // clear the name field for that row
+          setPrescribedMeds(prev => {
+            const upd = [...prev];
+            upd[index] = { ...upd[index], name: '' };
+            return upd;
+          });
+        }
+      }
+    }
   };
 
   // =====================================================
@@ -313,7 +331,7 @@ const DoctorPatients = () => {
     }
 
     const validMeds = prescribedMeds.filter(
-      med => med.medicineId && Number(med.quantity) > 0
+      med => med.name && med.name.trim() !== '' && Number(med.quantity) > 0
     );
 
     if (validMeds.length === 0) {
@@ -341,16 +359,35 @@ const DoctorPatients = () => {
       // PRESCRIBE EACH MEDICINE (via prescriptionService)
       // -------------------------------------------------
 
-      const medsPayload = validMeds.map(m => ({ medicine_id: Number(m.medicineId), quantity: Number(m.quantity) }));
+      // map medicines to names (backend expects medicine_name)
+      const medsPayload = validMeds.map(m => ({ medicine_name: m.name, quantity: Number(m.quantity) }));
 
       // call sequentially for each medicine (backend supports single-item POST)
-      for (const item of medsPayload) {
-        await prescribeMultiple({ patient_id: Number(editForm.id), medicines: [item], user_id: null });
-      }
+      // send all medicines in one bulk request so patient gets deleted once
+      await prescribeMultiple({ patient_id: Number(editForm.id), medicines: medsPayload, user_id: null });
 
-      alert(
-        `Prescription saved successfully for ${selectedPatient.Patient_Name}.`
-      );
+      const resMsg = `Prescription saved successfully for ${selectedPatient.Patient_Name}.`;
+
+      // Offer to delete patient now
+      const shouldDelete = window.confirm(`${resMsg}\n\nDelete patient record now? (You can cancel to keep the patient)`);
+
+      if (shouldDelete) {
+        try {
+          await deletePatient(Number(editForm.id), true);
+          alert('Patient deleted successfully.');
+          // Notify other pages that patients changed
+          try {
+            window.dispatchEvent(new CustomEvent('patients:changed'));
+          } catch (e) {
+            // ignore if dispatch fails
+          }
+        } catch (e) {
+          console.error('Delete patient error:', e);
+          alert('Prescription saved but patient could not be deleted.');
+        }
+      } else {
+        alert(resMsg);
+      }
 
       setEditModalOpen(false);
       setSelectedPatient(null);
@@ -718,9 +755,7 @@ const DoctorPatients = () => {
 
                   <button
                     className="modal-close-btn"
-                    onClick={() =>
-                      setEditModalOpen(false)
-                    }
+                    onClick={() => setEditModalOpen(false)}
                   >
                     <FaTimes />
                   </button>
@@ -863,40 +898,29 @@ const DoctorPatients = () => {
                                   Medicine *
                                 </label>
 
-                                <select
+                                <input
+                                  list="medicineOptions"
                                   className="form-control"
-                                  value={med.medicineId}
+                                  value={med.name}
                                   onChange={(e) =>
-                                    handleMedicineSelect(
+                                    handleMedFieldChange(
                                       index,
+                                      'name',
                                       e.target.value
                                     )
                                   }
+                                  placeholder="Type or select medicine"
                                   required
-                                >
+                                />
 
-                                  <option value="">
-                                    Select medicine
-                                  </option>
-
+                                <datalist id="medicineOptions">
                                   {pharmacyStock.map(medicine => (
-
                                     <option
                                       key={medicine.Medicine_ID}
-                                      value={medicine.Medicine_ID}
-                                    >
-                                      {medicine.Medicine_Name}
-                                      {' '}
-                                      —
-                                      {' '}
-                                      Stock:
-                                      {' '}
-                                      {medicine.Current_Stock}
-                                    </option>
-
+                                      value={medicine.Medicine_Name}
+                                    />
                                   ))}
-
-                                </select>
+                                </datalist>
 
                               </div>
 

@@ -3,11 +3,12 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 from database import get_db
+from sqlalchemy import text as sa_text
 from models import Patient
 from schemas import PatientCreate, PatientUpdate
 
 # Automatic prediction function
-from predict import run_automatic_prediction
+from predict import run_automatic_prediction, check_trigger, PATIENT_TRIGGER
 
 
 router = APIRouter(
@@ -63,11 +64,23 @@ def add_patient(
     db.commit()
 
     db.refresh(patient)
-    # Try to run automatic prediction but do not fail patient creation on errors
+    # After adding a patient, only run automatic prediction when the
+    # configured `PATIENT_TRIGGER` is reached (e.g. 2 patients for testing).
     prediction_result = None
 
     try:
-        prediction_result = run_automatic_prediction()
+        triggered, total = check_trigger()
+
+        if triggered:
+            prediction_result = run_automatic_prediction()
+        else:
+            prediction_result = {
+                "status": "waiting",
+                "patient_count": total,
+                "required_patients": PATIENT_TRIGGER,
+                "message": "Prediction trigger not reached."
+            }
+
     except Exception as e:
         prediction_result = {
             "status": "prediction_error",
@@ -87,6 +100,45 @@ def add_patient(
         "automatic_prediction": prediction_result
 
     }
+
+@router.delete("/{patient_id}")
+def delete_patient(
+    patient_id: int,
+    force: bool = False,
+    db: Session = Depends(get_db)
+):
+
+    # Check for dependent medicine_transactions
+    trans_q = db.execute(
+        sa_text("SELECT COUNT(*) AS total FROM medicine_transactions WHERE Patient_ID = :pid"),
+        {"pid": patient_id}
+    ).mappings().first()
+
+    trans_count = trans_q["total"] if trans_q else 0
+
+    if trans_count > 0 and not force:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Patient has related medicine transactions. Use force=true to delete and remove dependent records.",
+                "dependent_transactions": trans_count
+            }
+        )
+
+    try:
+        if force:
+            # delete dependent records first
+            db.execute(sa_text("DELETE FROM medicine_transactions WHERE Patient_ID = :pid"), {"pid": patient_id})
+            db.execute(sa_text("DELETE FROM prescriptions WHERE Patient_ID = :pid"), {"pid": patient_id})
+
+        db.execute(sa_text("DELETE FROM patients WHERE Patient_ID = :pid"), {"pid": patient_id})
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Unable to delete patient: {str(e)}")
+
+    return {"status": "success", "patient_deleted": True}
 
 
 # =========================================================
@@ -213,21 +265,21 @@ def update_patient(
     prediction_result = None
 
     try:
+        triggered, total = check_trigger()
 
-        prediction_result = run_automatic_prediction()
+        if triggered:
+            prediction_result = run_automatic_prediction()
+        else:
+            prediction_result = {
+                "status": "waiting",
+                "patient_count": total,
+                "required_patients": PATIENT_TRIGGER,
+                "message": "Prediction trigger not reached."
+            }
 
     except Exception as e:
-
-        # Patient update should NOT fail just because
-        # prediction has an error.
-
-        prediction_result = {
-
-            "status": "prediction_error",
-
-            "message": str(e)
-
-        }
+        # Patient update should NOT fail just because prediction has an error.
+        prediction_result = {"status": "prediction_error", "message": str(e)}
 
 
     # =====================================================

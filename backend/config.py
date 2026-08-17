@@ -41,3 +41,9 @@ STOCK_ALERT_PATH = (
 # ==========================
 
 DATABASE_URL = "mysql+pymysql://root:password@localhost/phc_database"
+ 
+# Threshold (predicted cases) at or above which a disease alert is created
+PREDICTION_ALERT_THRESHOLD = 36
+
+# Scheduler interval in minutes for automatic prediction runs (default: 60 minutes)
+SCHEDULER_INTERVAL_MINUTES = 60

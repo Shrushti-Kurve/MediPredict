@@ -852,9 +852,13 @@
 
 from datetime import date, timedelta
 from collections import Counter
+import pickle
+import pandas as pd
+import numpy as np
 
 from sqlalchemy import text
 from database import engine
+from config import MODEL_PATH, ENCODER_PATH, PREDICTION_ALERT_THRESHOLD
 
 
 # =========================================================
@@ -930,10 +934,11 @@ def get_live_patients():
 
 def check_trigger():
 
+    # Trigger based on total patients added (not only diagnosed),
+    # so adding N patients will trigger forecasting for quick testing.
     query = text("""
         SELECT COUNT(*) AS total
         FROM patients
-        WHERE Disease IS NOT NULL
     """)
 
     with engine.connect() as connection:
@@ -1008,6 +1013,28 @@ def create_disease_alert(
     if existing:
         return
 
+    # Avoid re-creating alerts that were dismissed recently (cooldown)
+    try:
+        recent = connection.execute(
+            text("""
+                SELECT Alert_ID
+                FROM alerts
+                WHERE Disease = :disease
+                AND Village = :village
+                AND Alert_Type = 'DISEASE_OUTBREAK'
+                AND Alert_Date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                LIMIT 1
+            """),
+            {"disease": disease, "village": village}
+        ).fetchone()
+
+        if recent:
+            # Recent alert exists (active or recently dismissed) — skip creating a new one
+            return
+    except Exception:
+        # If DB doesn't support DATE_SUB or similar, ignore and proceed
+        pass
+
     connection.execute(
         text("""
             INSERT INTO alerts
@@ -1042,6 +1069,46 @@ def create_disease_alert(
             "message": message
         }
     )
+
+    # Create notifications for all users (if notifications table exists)
+    try:
+        alert_id = connection.execute(
+            text("SELECT LAST_INSERT_ID()")
+        ).scalar()
+
+        if alert_id:
+            connection.execute(
+                text("""
+                    INSERT INTO notifications
+                    (
+                        Alert_ID,
+                        User_ID,
+                        Title,
+                        Message,
+                        Severity,
+                        Is_Read,
+                        Created_At
+                    )
+                    SELECT
+                        :alert_id,
+                        User_ID,
+                        :title,
+                        :message,
+                        :severity,
+                        0,
+                        NOW()
+                    FROM users
+                """),
+                {
+                    "alert_id": alert_id,
+                    "title": f"Disease outbreak: {disease}",
+                    "message": message,
+                    "severity": severity
+                }
+            )
+    except Exception:
+        # If notifications table / users table missing, skip silently
+        pass
 
 
 # =========================================================
@@ -1201,164 +1268,358 @@ def create_medicine_alerts(connection):
 
 def run_automatic_prediction():
 
-    triggered, patient_count = check_trigger()
+    # Always run predictions when scheduler calls this function.
+    # Gather current patient count for reporting, but do not gate execution
+    query = text("""
+        SELECT COUNT(*) AS total
+        FROM patients
+        WHERE Disease IS NOT NULL
+    """)
 
-    # -----------------------------------------------------
-    # GET DATA
-    # -----------------------------------------------------
+    with engine.connect() as connection:
+        result = connection.execute(query).mappings().first()
+        patient_count = result['total'] if result else 0
 
-    historical = get_historical_data()
-    live_patients = get_live_patients()
-
-    # -----------------------------------------------------
-    # ALWAYS CREATE MEDICINE ALERTS
-    # Even if patient trigger isn't reached
-    # -----------------------------------------------------
-
+    # Always generate medicine alerts (independent of prediction)
     with engine.begin() as connection:
-
         medicine_alerts = create_medicine_alerts(connection)
 
-    # -----------------------------------------------------
-    # PATIENT TRIGGER NOT REACHED
-    # -----------------------------------------------------
+    # Load datasets used by forecasting logic
+    try:
+        historical = get_historical_data()
+    except Exception:
+        historical = []
 
-    if not triggered:
-
-        return {
-            "status": "waiting",
-            "patient_count": patient_count,
-            "required_patients": PATIENT_TRIGGER,
-            "predictions": [],
-            "medicine_alerts": medicine_alerts,
-            "message": "Prediction trigger not reached."
-        }
-
-    # -----------------------------------------------------
-    # NO HISTORICAL DATA
-    # -----------------------------------------------------
-
-    if not historical:
-
-        return {
-            "status": "error",
-            "message": "No historical data available.",
-            "medicine_alerts": medicine_alerts
-        }
-
-    # -----------------------------------------------------
-    # NO LIVE PATIENTS
-    # -----------------------------------------------------
-
-    if not live_patients:
-
-        return {
-            "status": "error",
-            "message": "No live patient disease data available.",
-            "medicine_alerts": medicine_alerts
-        }
+    try:
+        live_patients = get_live_patients()
+    except Exception:
+        live_patients = []
 
     # =====================================================
     # DISEASE COUNTS
     # =====================================================
 
-    historical_diseases = Counter(
-        row["Disease"]
-        for row in historical
-        if row["Disease"]
-    )
-
-    live_diseases = Counter(
-        row["Disease"]
-        for row in live_patients
-        if row["Disease"]
-    )
-
     predictions = []
 
-    # =====================================================
-    # MODEL RUN
-    # =====================================================
+    # Load model and encoders if available
+    model = None
+    label_encoders = None
 
-    with engine.begin() as connection:
+    try:
+        with open(MODEL_PATH, 'rb') as fh:
+            model = pickle.load(fh)
+    except Exception:
+        model = None
 
-        connection.execute(
-            text("""
-                INSERT INTO model_runs
-                (
-                    Model_Name,
-                    Model_Version,
-                    Run_Date,
-                    Accuracy,
-                    Status
-                )
-                VALUES
-                (
-                    :name,
-                    :version,
-                    NOW(),
-                    :accuracy,
-                    :status
-                )
-            """),
-            {
-                "name": MODEL_NAME,
-                "version": MODEL_VERSION,
-                "accuracy": 90.00,
-                "status": "SUCCESS"
-            }
+    try:
+        with open(ENCODER_PATH, 'rb') as fh:
+            label_encoders = pickle.load(fh)
+    except Exception:
+        label_encoders = None
+
+    # Helper: determine season from month (fallback mapping)
+    def month_to_season(m):
+        m = int(m)
+        if m in (12, 1, 2):
+            return 'Winter'
+        if m in (3, 4, 5):
+            return 'Summer'
+        if m in (6, 7, 8, 9):
+            return 'Monsoon'
+        return 'Post-Monsoon'
+
+    # Build unique disease+village combinations from live patients only
+    all_pairs = set(
+        (
+            row['Disease'],
+            row['Village']
         )
+        for row in live_patients
+        if row.get('Disease') and row.get('Village')
+    )
 
-        model_run_id = connection.execute(
-            text("""
-                SELECT LAST_INSERT_ID()
-            """)
-        ).scalar()
+    # Forecast date — predict one month ahead
+    forecast_dt = date.today() + timedelta(days=30)
+    forecast_year = forecast_dt.year
+    forecast_month = forecast_dt.month
+    forecast_season = month_to_season(forecast_month)
 
-        # =================================================
-        # FORECAST BY DISEASE + VILLAGE
-        # =================================================
-                # =================================================
-        # FORECAST BY DISEASE + VILLAGE
-        # =================================================
+    # Prepare dataframe for model prediction
+    rows = []
 
-        all_diseases = set(
+    for disease, village in all_pairs:
+        rows.append({
+            'Village': village,
+            'Disease': disease,
+            'Season': forecast_season,
+            'Year': forecast_year,
+            'Month': forecast_month
+        })
+
+    if model is not None and len(rows) > 0:
+
+        df = pd.DataFrame(rows)
+
+        X = df.copy()
+
+        # Apply label encoders if available
+        for col in ['Village', 'Disease', 'Season']:
+            if label_encoders and col in label_encoders:
+                enc = label_encoders[col]
+                transformed = []
+                for val in X[col].astype(str).values:
+                    try:
+                        transformed.append(int(enc.transform([val])[0]))
+                    except Exception:
+                        # unseen label → fallback to first class index
+                        try:
+                            transformed.append(int(enc.transform([enc.classes_[0]])[0]))
+                        except Exception:
+                            transformed.append(0)
+                X[col] = transformed
+
+        # Ensure column order matches training: Village,Disease,Season,Year,Month
+        try:
+            preds = model.predict(X[[ 'Village', 'Disease', 'Season', 'Year', 'Month']].values)
+        except Exception:
+            preds = model.predict(X.values)
+
+        preds = np.maximum(0, np.rint(preds)).astype(int)
+
+        # Save predictions and create alerts based on threshold
+        with engine.begin() as connection:
+
+            connection.execute(
+                text("""
+                    INSERT INTO model_runs
+                    (
+                        Model_Name,
+                        Model_Version,
+                        Run_Date,
+                        Accuracy,
+                        Status
+                    )
+                    VALUES
+                    (
+                        :name,
+                        :version,
+                        NOW(),
+                        :accuracy,
+                        :status
+                    )
+                """),
+                {
+                    'name': MODEL_NAME,
+                    'version': MODEL_VERSION,
+                    'accuracy': 90.0,
+                    'status': 'SUCCESS'
+                }
+            )
+
+            model_run_id = connection.execute(
+                text("SELECT LAST_INSERT_ID()")
+            ).scalar()
+
+            for i, row in df.iterrows():
+
+                village = row['Village']
+                disease = row['Disease']
+                predicted_cases = int(preds[i])
+
+                risk = calculate_risk(predicted_cases)
+
+                # Save prediction
+                connection.execute(
+                    text("""
+                        INSERT INTO outbreak_predictions
+                        (
+                            Village,
+                            Disease,
+                            Prediction_Date,
+                            Forecast_Date,
+                            Predicted_Cases,
+                            Risk_Level,
+                            Model_Run_ID,
+                            Trigger_Reason
+                        )
+                        VALUES
+                        (
+                            :village,
+                            :disease,
+                            NOW(),
+                            :forecast_date,
+                            :predicted_cases,
+                            :risk,
+                            :model_run_id,
+                            :trigger_reason
+                        )
+                    """),
+                    {
+                        'village': village,
+                        'disease': disease,
+                        'forecast_date': forecast_dt,
+                        'predicted_cases': predicted_cases,
+                        'risk': risk,
+                        'model_run_id': model_run_id,
+                        'trigger_reason': 'MODEL_FORECAST'
+                    }
+                )
+
+                # Create disease alert if predicted cases reach configured threshold
+                if predicted_cases >= PREDICTION_ALERT_THRESHOLD:
+                    create_disease_alert(
+                        connection,
+                        disease,
+                        village,
+                        predicted_cases,
+                        risk
+                    )
+
+                predictions.append({
+                    'village': village,
+                    'disease': disease,
+                    'predicted_cases': predicted_cases,
+                    'risk_level': risk
+                })
+
+    else:
+        # Fallback: preserve previous counting behaviour (no ML model available)
+        historical_diseases = Counter(
             row["Disease"]
             for row in historical
             if row["Disease"]
         )
 
-        for disease in all_diseases:
+        live_diseases = Counter(
+            row["Disease"]
+            for row in live_patients
+            if row["Disease"]
+        )
 
-            villages = set(
-                row["Village"]
-                for row in historical
-                if row["Disease"] == disease
-                and row["Village"]
-                and str(row["Village"]).strip() != ""
+        with engine.begin() as connection:
+
+            connection.execute(
+                text("""
+                    INSERT INTO model_runs
+                    (
+                        Model_Name,
+                        Model_Version,
+                        Run_Date,
+                        Accuracy,
+                        Status
+                    )
+                    VALUES
+                    (
+                        :name,
+                        :version,
+                        NOW(),
+                        :accuracy,
+                        :status
+                    )
+                """),
+                {
+                    "name": MODEL_NAME,
+                    "version": MODEL_VERSION,
+                    "accuracy": 90.00,
+                    "status": "SUCCESS"
+                }
             )
 
-            for village in villages:
+            model_run_id = connection.execute(
+                text("SELECT LAST_INSERT_ID()")
+            ).scalar()
 
-                historical_village_cases = sum(
-                    1
+            # Simple counting fallback
+            all_diseases = set(
+                row["Disease"]
+                for row in historical
+                if row["Disease"]
+            )
+
+            for disease in all_diseases:
+
+                villages = set(
+                    row["Village"]
                     for row in historical
                     if row["Disease"] == disease
-                    and row["Village"] == village
+                    and row["Village"]
+                    and str(row["Village"]).strip() != ""
                 )
 
-                current_village_cases = sum(
-                    1
-                    for row in live_patients
-                    if row["Disease"] == disease
-                    and row["Village"] == village
-                )
+                for village in villages:
 
-                predicted_cases = (
-                    historical_village_cases +
-                    current_village_cases
-                )
+                    historical_village_cases = sum(
+                        1
+                        for row in historical
+                        if row["Disease"] == disease
+                        and row["Village"] == village
+                    )
 
+                    current_village_cases = sum(
+                        1
+                        for row in live_patients
+                        if row["Disease"] == disease
+                        and row["Village"] == village
+                    )
+
+                    predicted_cases = (
+                        historical_village_cases +
+                        current_village_cases
+                    )
+
+                    risk = calculate_risk(predicted_cases)
+
+                    connection.execute(
+                        text("""
+                            INSERT INTO outbreak_predictions
+                            (
+                                Village,
+                                Disease,
+                                Prediction_Date,
+                                Forecast_Date,
+                                Predicted_Cases,
+                                Risk_Level,
+                                Model_Run_ID,
+                                Trigger_Reason
+                            )
+                            VALUES
+                            (
+                                :village,
+                                :disease,
+                                NOW(),
+                                :forecast_date,
+                                :predicted_cases,
+                                :risk,
+                                :model_run_id,
+                                :trigger_reason
+                            )
+                        """),
+                        {
+                            "village": village,
+                            "disease": disease,
+                            "forecast_date": date.today() + timedelta(days=30),
+                            "predicted_cases": predicted_cases,
+                            "risk": risk,
+                            "model_run_id": model_run_id,
+                            "trigger_reason": f"{PATIENT_TRIGGER}_PATIENT_TRIGGER"
+                        }
+                    )
+
+                    if predicted_cases >= PREDICTION_ALERT_THRESHOLD:
+                        create_disease_alert(
+                            connection,
+                            disease,
+                            village,
+                            predicted_cases,
+                            risk
+                        )
+
+                    predictions.append({
+                        "village": village,
+                        "disease": disease,
+                        "predicted_cases": predicted_cases,
+                        "risk_level": risk
+                    })
                 risk = calculate_risk(predicted_cases)
 
                 # SAVE PREDICTION

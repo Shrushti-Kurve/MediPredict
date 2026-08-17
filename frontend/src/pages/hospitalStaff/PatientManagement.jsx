@@ -36,6 +36,13 @@ const PatientManagement = () => {
 
   useEffect(() => {
     loadPatients();
+    // Listen for cross-page patient changes (e.g., deleted by doctor)
+    const handler = () => loadPatients();
+    window.addEventListener('patients:changed', handler);
+
+    return () => {
+      window.removeEventListener('patients:changed', handler);
+    };
   }, []);
 
   const loadPatients = async () => {
