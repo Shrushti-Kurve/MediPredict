@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
 import PowerBIEmbed from '../../components/PowerBIEmbed/PowerBIEmbed';
-import './PharmacistDashboard.css';
+import './AdminDashboard.css';
 
-const PharmacistDashboard = () => {
+const AdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -12,11 +12,11 @@ const PharmacistDashboard = () => {
       <Sidebar isOpen={sidebarOpen} toggleSidebar={setSidebarOpen} />
       
       <div className="dashboard-main">
-        <DashboardHeader title="Pharmacist Power BI Dashboard" toggleSidebar={setSidebarOpen} />
+        <DashboardHeader title="Admin Power BI Dashboard" toggleSidebar={setSidebarOpen} />
         
         <main className="dashboard-content">
           <div className="powerbi-section-wrapper">
-            <PowerBIEmbed role="pharmacist" height="680px" />
+            <PowerBIEmbed role="admin" height="680px" />
           </div>
         </main>
       </div>
@@ -24,4 +24,4 @@ const PharmacistDashboard = () => {
   );
 };
 
-export default PharmacistDashboard;
+export default AdminDashboard;

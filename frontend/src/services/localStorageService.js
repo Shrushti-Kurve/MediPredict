@@ -1,9 +1,53 @@
 import { mockUsers, mockPatients, mockMedicines, mockAlerts } from '../data/mockData';
 
+// Predefined Admin Accounts (Exclusive & Fixed)
+export const PREDEFINED_ADMINS = [
+  {
+    id: "U004",
+    name: "System Administrator 1",
+    email: "admin1@medipredict.com",
+    phone: "9876543213",
+    password: "MPAdmin@2026#01",
+    role: "admin",
+    status: "Active",
+    registrationDate: "2026-01-01"
+  },
+  {
+    id: "U005",
+    name: "System Administrator 2",
+    email: "admin2@medipredict.com",
+    phone: "9876543214",
+    password: "MPAdmin@2026#02",
+    role: "admin",
+    status: "Active",
+    registrationDate: "2026-01-01"
+  }
+];
+
 // Initialize data if not present
 export const initializeData = () => {
   if (!localStorage.getItem('users')) {
     localStorage.setItem('users', JSON.stringify(mockUsers));
+  } else {
+    // Ensure only the two predefined admin accounts exist in local storage users
+    try {
+      let existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      // Remove any legacy admin accounts (e.g. admin@example.com)
+      existingUsers = existingUsers.filter(u => u.email !== 'admin@example.com');
+      
+      // Ensure admin1 and admin2 exist with exact credentials
+      PREDEFINED_ADMINS.forEach(adminAcc => {
+        const idx = existingUsers.findIndex(u => u.email.toLowerCase() === adminAcc.email.toLowerCase());
+        if (idx !== -1) {
+          existingUsers[idx] = { ...existingUsers[idx], ...adminAcc };
+        } else {
+          existingUsers.push(adminAcc);
+        }
+      });
+      localStorage.setItem('users', JSON.stringify(existingUsers));
+    } catch {
+      localStorage.setItem('users', JSON.stringify(mockUsers));
+    }
   }
   if (!localStorage.getItem('patients')) {
     localStorage.setItem('patients', JSON.stringify(mockPatients));
@@ -35,10 +79,45 @@ export const getUsers = () => {
   return JSON.parse(localStorage.getItem('users') || '[]');
 };
 
-export const login = (email, password) => {
+export const saveUsers = (users) => {
+  localStorage.setItem('users', JSON.stringify(users));
+};
+
+export const updateUserStatus = (userId, status) => {
   const users = getUsers();
-  const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+  const index = users.findIndex(u => u.id === userId);
+  if (index !== -1) {
+    users[index].status = status;
+    saveUsers(users);
+    return users[index];
+  }
+  return null;
+};
+
+export const login = (email, password) => {
+  const cleanEmail = email ? email.trim().toLowerCase() : '';
+  const cleanPassword = password ? password.trim() : '';
+
+  // 1. Check if the login attempt is for a predefined Admin account
+  const matchingAdmin = PREDEFINED_ADMINS.find(a => a.email.toLowerCase() === cleanEmail);
+  if (matchingAdmin) {
+    if (matchingAdmin.password === cleanPassword) {
+      setLoggedInUser(matchingAdmin);
+      return matchingAdmin;
+    }
+    // Invalid password for admin
+    return null;
+  }
+
+  // 2. Otherwise, authenticate standard non-admin users (Doctor, Hospital Staff, Pharmacist)
+  const users = getUsers();
+  const user = users.find(u => u.email.toLowerCase() === cleanEmail && u.password === cleanPassword);
+  
   if (user) {
+    // Only allow non-admin roles through standard user lookup
+    if (user.role === 'admin') {
+      return null;
+    }
     setLoggedInUser(user);
     return user;
   }
@@ -46,8 +125,18 @@ export const login = (email, password) => {
 };
 
 export const signup = (userData) => {
+  // Reject any attempt to register an Admin account
+  if (userData.role === 'admin') {
+    throw new Error('Admin registration is disabled. Administrator accounts are predefined.');
+  }
+
+  const cleanEmail = userData.email ? userData.email.trim().toLowerCase() : '';
+  if (PREDEFINED_ADMINS.some(a => a.email.toLowerCase() === cleanEmail)) {
+    throw new Error('This email is reserved for system administrators.');
+  }
+
   const users = getUsers();
-  const emailExists = users.some(u => u.email.toLowerCase() === userData.email.toLowerCase());
+  const emailExists = users.some(u => u.email.toLowerCase() === cleanEmail);
   if (emailExists) {
     throw new Error('Email is already registered.');
   }
@@ -55,7 +144,10 @@ export const signup = (userData) => {
   const newId = 'U' + String(users.length + 1).padStart(3, '0');
   const newUser = {
     id: newId,
-    ...userData
+    status: 'Active',
+    registrationDate: new Date().toISOString().split('T')[0],
+    ...userData,
+    email: cleanEmail
   };
   
   users.push(newUser);
@@ -80,7 +172,7 @@ export const updateUserProfile = (updatedData) => {
     addAlert(
       'Info',
       `User ${updatedUser.name} (${updatedUser.role}) updated their profile details.`,
-      updatedUser.role === 'doctor' ? 'doctor' : updatedUser.role === 'hospitalStaff' ? 'hospitalStaff' : 'pharmacist'
+      updatedUser.role === 'doctor' ? 'doctor' : updatedUser.role === 'hospitalStaff' ? 'hospitalStaff' : updatedUser.role === 'pharmacist' ? 'pharmacist' : 'admin'
     );
     
     return updatedUser;

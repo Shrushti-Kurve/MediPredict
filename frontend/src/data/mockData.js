@@ -5,7 +5,9 @@ export const mockUsers = [
     email: "doctor@example.com",
     phone: "9876543210",
     password: "password",
-    role: "doctor"
+    role: "doctor",
+    status: "Active",
+    registrationDate: "2026-01-15"
   },
   {
     id: "U002",
@@ -13,7 +15,9 @@ export const mockUsers = [
     email: "staff@example.com",
     phone: "9876543211",
     password: "password",
-    role: "hospitalStaff"
+    role: "hospitalStaff",
+    status: "Active",
+    registrationDate: "2026-02-01"
   },
   {
     id: "U003",
@@ -21,7 +25,29 @@ export const mockUsers = [
     email: "pharmacist@example.com",
     phone: "9876543212",
     password: "password",
-    role: "pharmacist"
+    role: "pharmacist",
+    status: "Active",
+    registrationDate: "2026-02-10"
+  },
+  {
+    id: "U004",
+    name: "System Administrator 1",
+    email: "admin1@medipredict.com",
+    phone: "9876543213",
+    password: "MPAdmin@2026#01",
+    role: "admin",
+    status: "Active",
+    registrationDate: "2026-01-01"
+  },
+  {
+    id: "U005",
+    name: "System Administrator 2",
+    email: "admin2@medipredict.com",
+    phone: "9876543214",
+    password: "MPAdmin@2026#02",
+    role: "admin",
+    status: "Active",
+    registrationDate: "2026-01-01"
   }
 ];
 

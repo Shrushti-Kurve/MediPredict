@@ -19,6 +19,7 @@ const Login = () => {
       if (user.role === 'doctor') navigate('/doctor/dashboard');
       else if (user.role === 'hospitalStaff') navigate('/hospital/dashboard');
       else if (user.role === 'pharmacist') navigate('/pharmacist/dashboard');
+      else if (user.role === 'admin') navigate('/admin/dashboard');
     }
   }, [navigate]);
 
@@ -42,6 +43,8 @@ const Login = () => {
           navigate('/hospital/dashboard');
         } else if (user.role === 'pharmacist') {
           navigate('/pharmacist/dashboard');
+        } else if (user.role === 'admin') {
+          navigate('/admin/dashboard');
         }
       } else {
         setError('Invalid email or password.');

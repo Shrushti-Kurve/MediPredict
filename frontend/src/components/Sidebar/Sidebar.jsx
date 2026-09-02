@@ -7,7 +7,9 @@ import {
   FaUserInjured, 
   FaBell, 
   FaPills, 
-  FaTimes 
+  FaTimes,
+  FaUsers,
+  FaChartPie
 } from 'react-icons/fa';
 import { getLoggedInUser, logout } from '../../services/localStorageService';
 import logo from '../../assets/logo/logo.png';
@@ -138,6 +140,67 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             </NavLink>
             <NavLink 
               to="/pharmacist/profile" 
+              className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+              onClick={() => toggleSidebar && toggleSidebar(false)}
+            >
+              <FaUser className="sidebar-icon" />
+              <span>Profile</span>
+            </NavLink>
+          </>
+        );
+      case 'admin':
+        return (
+          <>
+            <NavLink 
+              to="/admin/dashboard" 
+              className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+              onClick={() => toggleSidebar && toggleSidebar(false)}
+            >
+              <FaChartBar className="sidebar-icon" />
+              <span>Dashboard</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/users" 
+              className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+              onClick={() => toggleSidebar && toggleSidebar(false)}
+            >
+              <FaUsers className="sidebar-icon" />
+              <span>Users</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/alerts" 
+              className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+              onClick={() => toggleSidebar && toggleSidebar(false)}
+            >
+              <FaBell className="sidebar-icon" />
+              <span>Alerts</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/patients" 
+              className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+              onClick={() => toggleSidebar && toggleSidebar(false)}
+            >
+              <FaUserInjured className="sidebar-icon" />
+              <span>Patients</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/medicines" 
+              className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+              onClick={() => toggleSidebar && toggleSidebar(false)}
+            >
+              <FaPills className="sidebar-icon" />
+              <span>Medicines</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/reports" 
+              className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+              onClick={() => toggleSidebar && toggleSidebar(false)}
+            >
+              <FaChartPie className="sidebar-icon" />
+              <span>Reports</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/profile" 
               className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
               onClick={() => toggleSidebar && toggleSidebar(false)}
             >

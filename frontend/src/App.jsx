@@ -29,6 +29,14 @@ import PharmacistDashboard from './pages/pharmacist/PharmacistDashboard';
 import MedicineStock from './pages/pharmacist/MedicineStock';
 import PharmacistAlerts from './pages/pharmacist/PharmacistAlerts';
 
+// Admin Pages
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminAlerts from './pages/admin/AdminAlerts';
+import AdminPatients from './pages/admin/AdminPatients';
+import AdminMedicines from './pages/admin/AdminMedicines';
+import AdminReports from './pages/admin/AdminReports';
+
 // Shared Pages
 import Profile from './pages/Profile';
 
@@ -153,6 +161,64 @@ function App() {
           path="/pharmacist/profile" 
           element={
             <ProtectedRoute allowedRoles={['pharmacist']}>
+              <Profile />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Admin Workspace Protected Routes */}
+        <Route 
+          path="/admin/dashboard" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/users" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminUsers />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/alerts" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminAlerts />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/patients" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminPatients />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/medicines" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminMedicines />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/reports" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminReports />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/profile" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
               <Profile />
             </ProtectedRoute>
           } 

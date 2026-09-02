@@ -1,0 +1,140 @@
+.admin-alerts-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-alerts-filters {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.admin-alerts-container {
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-alert-card {
+  border-radius: var(--radius);
+  background-color: #ffffff;
+  border: 1px solid var(--border);
+  border-left-width: 5px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-fast);
+}
+
+.admin-alert-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.admin-alert-card.border-critical {
+  border-left-color: var(--danger);
+}
+
+.admin-alert-card.border-warning {
+  border-left-color: var(--warning);
+}
+
+.admin-alert-card.border-medicine {
+  border-left-color: var(--secondary);
+}
+
+.admin-alert-card.border-info {
+  border-left-color: var(--primary);
+}
+
+.admin-alert-card-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.admin-alert-icon-col {
+  font-size: 1.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0.15rem;
+}
+
+.critical-icon {
+  color: var(--danger);
+}
+
+.warning-icon {
+  color: var(--warning);
+}
+
+.medicine-icon {
+  color: var(--secondary);
+}
+
+.info-icon {
+  color: var(--primary);
+}
+
+.admin-alert-text-col {
+  flex-grow: 1;
+}
+
+.admin-alert-topline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.admin-alert-category-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  background-color: var(--background);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.admin-alert-time {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.admin-alert-body {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .admin-alerts-filters {
+    flex-direction: column;
+  }
+
+  .admin-alert-topline {
+    gap: 0.5rem;
+  }
+
+  .admin-alert-time {
+    margin-left: 0;
+    width: 100%;
+  }
+}

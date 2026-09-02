@@ -60,6 +60,10 @@ export const getRoleAlerts = async (role) => {
 
       if (alertRole === role) return true;
 
+      if (role === 'admin') {
+        return true;
+      }
+
       if (role === 'doctor') {
         return category.includes('DISEASE') || alertType.includes('DISEASE') || /patient|condition|diagnosis|critical|follow-up/i.test(messageText);
       }

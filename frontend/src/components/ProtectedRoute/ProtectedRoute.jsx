@@ -17,6 +17,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
       return <Navigate to="/hospital/dashboard" replace />;
     } else if (user.role === 'pharmacist') {
       return <Navigate to="/pharmacist/dashboard" replace />;
+    } else if (user.role === 'admin') {
+      return <Navigate to="/admin/dashboard" replace />;
     }
     // General fallback
     return <Navigate to="/login" replace />;

@@ -17,6 +17,7 @@ const DashboardHeader = ({ title, toggleSidebar }) => {
     if (role === 'doctor') return 'Doctor';
     if (role === 'hospitalStaff') return 'Hospital Staff';
     if (role === 'pharmacist') return 'Pharmacist';
+    if (role === 'admin') return 'Admin';
     return role;
   };
 
