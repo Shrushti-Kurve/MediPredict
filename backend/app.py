@@ -24,7 +24,7 @@ from predict import predict_outbreak
 
 from alerts import router as alert_router
 
-from dashboard import dashboard
+from dashboard import dashboard, router as dashboard_router
 
 from prescriptions import router as prescription_router
 
@@ -77,6 +77,7 @@ app.include_router(prediction_router)
 
 app.include_router(alerts_router)
 
+app.include_router(dashboard_router)
 
 
 # =========================================================
