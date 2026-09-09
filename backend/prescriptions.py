@@ -4,6 +4,8 @@ from sqlalchemy import text
 from datetime import datetime
 
 from database import get_db
+from notifications import create_notification_for_alert
+from predict import run_automatic_prediction
 
 
 router = APIRouter(
@@ -326,59 +328,38 @@ def prescribe_medicine(
     # -----------------------------------------------------
 
     if alert_id:
-
-        notification_query = text("""
-            INSERT INTO notifications
-            (
-                Alert_ID,
-                User_ID,
-                Title,
-                Message,
-                Severity,
-                Is_Read,
-                Created_At
-            )
-
-            SELECT
-                :alert_id,
-                User_ID,
-                :title,
-                :message,
-                :severity,
-                0,
-                NOW()
-
-            FROM users
-        """)
-
-
-        db.execute(
-            notification_query,
-            {
-                "alert_id": alert_id,
-
-                "title":
-                    f"Medicine {new_status}",
-
-                "message":
-                    f"{medicine['Medicine_Name']} "
-                    f"stock status is {new_status}. "
-                    f"Remaining stock: {new_stock}",
-
-                "severity":
-                    "MEDIUM"
-                    if new_status == "LOW"
-                    else "HIGH"
-            }
+        title = f"Medicine {new_status}"
+        message = (
+            f"{medicine['Medicine_Name']} stock status is {new_status}. "
+            f"Remaining stock: {new_stock}"
+        )
+        severity = "MEDIUM" if new_status == "LOW" else "HIGH"
+        create_notification_for_alert(
+            db,
+            alert_id,
+            title,
+            message,
+            severity,
+            "/alerts",
         )
 
 
     # -----------------------------------------------------
-    # SAVE EVERYTHING
+    # DO NOT hard-delete the patient record.
+    # The patient should leave the pending queue after prescription,
+    # but remain in the system for historical analysis and forecasting.
     # -----------------------------------------------------
 
     db.commit()
 
+
+    try:
+        forecast_result = run_automatic_prediction()
+    except Exception as exc:
+        forecast_result = {
+            "status": "prediction_error",
+            "message": str(exc)
+        }
 
     # -----------------------------------------------------
     # RESPONSE
@@ -401,6 +382,8 @@ def prescribe_medicine(
         "stock_status": new_status,
 
         "alert_generated":
-            alert_id is not None
+            alert_id is not None,
+
+        "forecast_result": forecast_result
 
     }

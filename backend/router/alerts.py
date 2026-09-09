@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from sqlalchemy import text
 from database import engine
+from notifications import cleanup_old_alerts
 
 router = APIRouter(
     prefix="/alerts",
@@ -25,7 +26,9 @@ def get_alerts():
             Status
         FROM alerts
         WHERE Status = 'Active'
+          AND Alert_Category IN ('DISEASE', 'MEDICINE')
           AND Severity IN ('HIGH', 'MEDIUM')
+          AND Alert_Date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
         ORDER BY
             CASE
                 WHEN Severity = 'HIGH' THEN 1
@@ -36,8 +39,8 @@ def get_alerts():
             Alert_ID DESC
     """)
 
-    with engine.connect() as connection:
-
+    with engine.begin() as connection:
+        cleanup_old_alerts(connection)
         rows = connection.execute(query).mappings().all()
 
     return [dict(row) for row in rows]
@@ -50,11 +53,13 @@ def get_alert_count():
         SELECT COUNT(*) AS total
         FROM alerts
         WHERE Status = 'Active'
+          AND Alert_Category IN ('DISEASE', 'MEDICINE')
           AND Severity IN ('HIGH', 'MEDIUM')
+          AND Alert_Date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
     """)
 
-    with engine.connect() as connection:
-
+    with engine.begin() as connection:
+        cleanup_old_alerts(connection)
         result = connection.execute(query).mappings().first()
 
     return {

@@ -31,6 +31,9 @@ def get_alerts(
             Alert_Date,
             Status
         FROM alerts
+        WHERE Status = 'Active'
+          AND Alert_Date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+          AND Alert_Category IN ('DISEASE', 'MEDICINE')
         ORDER BY Alert_Date DESC
     """)
 
@@ -53,10 +56,12 @@ def alert_count(
         SELECT COUNT(*) AS count
         FROM alerts
         WHERE Status = 'Active'
+          AND Alert_Date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+          AND Alert_Category IN ('DISEASE', 'MEDICINE')
     """)
 
     result = db.execute(query).mappings().first()
 
     return {
-        "count": result["count"]
+        "count": result["count"] if result else 0
     }

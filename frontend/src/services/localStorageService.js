@@ -226,6 +226,56 @@ export const savePatients = (patients) => {
   localStorage.setItem('patients', JSON.stringify(patients.map(normalizePatient)));
 };
 
+const normalizeDiseaseKey = (value = '') => String(value || '')
+  .trim()
+  .toLowerCase()
+  .replace(/&/g, ' and ')
+  .replace(/[^a-z0-9\s]/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const getDiseaseForecastSummary = (patients = []) => {
+  const grouped = new Map();
+
+  (Array.isArray(patients) ? patients : []).forEach((patient) => {
+    const rawDisease = patient?.disease ? String(patient.disease).trim() : '';
+    const normalized = normalizeDiseaseKey(rawDisease);
+    if (!normalized) return;
+
+    const entry = grouped.get(normalized) || {
+      disease: rawDisease,
+      count: 0,
+      patients: []
+    };
+
+    entry.count += 1;
+    entry.patients.push(patient);
+    grouped.set(normalized, entry);
+  });
+
+  return Array.from(grouped.values())
+    .filter(entry => entry.count >= 2)
+    .sort((a, b) => b.count - a.count);
+};
+
+const triggerDiseaseForecastIfNeeded = (patients = []) => {
+  const diseaseGroups = getDiseaseForecastSummary(patients);
+  if (diseaseGroups.length === 0) return null;
+
+  const topGroup = diseaseGroups[0];
+  const alertMessage = `Disease surveillance triggered for ${topGroup.disease}. ${topGroup.count} patients are currently showing this condition in the current intake.`;
+
+  addAlert(
+    'Warning',
+    alertMessage,
+    'doctor',
+    'Disease Alert',
+    'disease'
+  );
+
+  return topGroup;
+};
+
 export const addPatient = (patientData) => {
   const patients = getPatients();
   const currentUser = getLoggedInUser();
@@ -243,13 +293,7 @@ export const addPatient = (patientData) => {
   
   patients.push(newPatient);
   savePatients(patients);
-  
-  // Add Alert
-  addAlert(
-    'Info',
-    `New patient ${newPatient.name} (${newPatient.id}) registered by ${currentUser?.name || 'Hospital Staff'}.`,
-    'hospitalStaff'
-  );
+  triggerDiseaseForecastIfNeeded(patients);
   
   return newPatient;
 };
@@ -277,17 +321,15 @@ export const updatePatient = (updatedPatient) => {
       });
 
       const medSummary = patients[index].medicine;
-
-      addAlert(
-        'Info',
-        `Patient ${originalPatient.name} prescription updated by ${currentUser.name}: ${medSummary}.`,
-        'hospitalStaff'
-      );
-      addAlert(
-        'Info',
-        `Prescription updated for ${originalPatient.name} (${updatedMedicines.length} medication${updatedMedicines.length === 1 ? '' : 's'}).`,
-        'doctor'
-      );
+      if (medSummary && medSummary !== 'Not Prescribed Yet') {
+        addAlert(
+          'Warning',
+          `Clinical review for ${originalPatient.name}: prescription updated to ${medSummary}.`,
+          'doctor',
+          'Disease Alert',
+          'disease'
+        );
+      }
     } else {
       // Hospital staff CANNOT modify medicines - preserve doctor's prescription!
       patients[index] = normalizePatient({
@@ -296,25 +338,16 @@ export const updatePatient = (updatedPatient) => {
         medicine: originalPatient.medicine || 'Not Prescribed Yet',
         medicineQuantity: originalPatient.medicineQuantity || 0
       });
-      
-      addAlert(
-        'Info',
-        `Patient record ${originalPatient.name} updated by Staff ${currentUser?.name || ''}.`,
-        'hospitalStaff'
-      );
     }
     
     // If the patient status is set to Critical, create critical alert
     if (updatedPatient.status === 'Critical' && originalPatient.status !== 'Critical') {
       addAlert(
         'Critical',
-        `Critical status flagged for patient ${updatedPatient.name} (${updatedPatient.id}) - ${updatedPatient.disease}`,
-        'doctor'
-      );
-      addAlert(
-        'Critical',
-        `Critical status flagged for patient ${updatedPatient.name} (${updatedPatient.id})`,
-        'hospitalStaff'
+        `Critical disease status flagged for patient ${updatedPatient.name} (${updatedPatient.id}) - ${updatedPatient.disease || 'clinical review'}.`,
+        'doctor',
+        'Disease Alert',
+        'disease'
       );
     }
     
@@ -345,41 +378,32 @@ export const prescribeMedicines = (patientId, { medicines = [], disease, symptom
     lastVisit: new Date().toISOString().split('T')[0]
   });
 
-  patients[index] = updatedPatient;
+  patients[index] = {
+    ...updatedPatient,
+    status: 'Prescribed',
+    pendingPrescription: false,
+    medicines: medicines || []
+  };
+
+  triggerDiseaseForecastIfNeeded(patients);
+
   savePatients(patients);
+  deletePatient(patientId);
 
-  addAlert(
-    'Info',
-    `Dr. ${currentUser?.name || 'Sarah Paul'} prescribed ${medicines.length} medicine(s) for ${updatedPatient.name}.`,
-    'hospitalStaff',
-    'Prescription Updated',
-    'medicine'
-  );
-  addAlert(
-    'Info',
-    `Prescription saved for ${updatedPatient.name} (${updatedPatient.id}).`,
-    'doctor',
-    'Prescription Saved',
-    'medicine'
-  );
-
-  return updatedPatient;
+  return {
+    ...patients[index],
+    deleted: true,
+    status: 'Prescribed'
+  };
 };
 
 export const deletePatient = (patientId) => {
   const patients = getPatients();
-  const currentUser = getLoggedInUser();
   const patient = patients.find(p => p.id === patientId);
   
   if (patient) {
     const updatedPatients = patients.filter(p => p.id !== patientId);
     savePatients(updatedPatients);
-    
-    addAlert(
-      'Warning',
-      `Patient record ${patient.name} (${patient.id}) deleted by Staff ${currentUser?.name || ''}.`,
-      'hospitalStaff'
-    );
     return true;
   }
   return false;
@@ -492,37 +516,118 @@ export const dispenseMedicine = (medicineId, quantity, patientName = '') => {
 
 // --- ALERTS SERVICES ---
 
+const isMeaningfulAlertMessage = (message = '') => {
+  const text = String(message).toLowerCase();
+  const blockedPatterns = [
+    'prescription saved',
+    'prescription added',
+    'prescription updated',
+    'patient added',
+    'patient updated',
+    'patient record',
+    'registered by',
+    'new patient',
+    'new admission',
+    'patient registered',
+    'patient joined',
+    'added by',
+    'updated their profile',
+    'successfully',
+    'saved successfully',
+    'added to inventory',
+    'medicine added',
+    'updated by',
+    'dispensed',
+    'recorded in system',
+    'system clinical alert',
+    'profile updated'
+  ];
+
+  return !blockedPatterns.some(pattern => text.includes(pattern));
+};
+
+const shouldIncludeAlert = (alert) => {
+  if (!alert) return false;
+  const text = `${alert.title || ''} ${alert.description || ''} ${alert.message || ''}`.toLowerCase();
+  const category = (alert.category || '').toString().toLowerCase();
+  const role = (alert.role || '').toString().toLowerCase();
+  const isMedicineAlert = category.includes('medicine') || /medicine|stock|inventory|expiry|expired|out of stock|low stock|units|reorder/.test(text);
+  const isDiseaseAlert = category.includes('disease') || /disease|outbreak|risk|forecast|epidemic|diagnosis|severity|clinical|infection|surveillance/.test(text);
+  const isBlocked = !isMeaningfulAlertMessage(text) || /prescription|patient registered|registered by|new patient|new admission|saved successfully|updated their profile|updated by|added to inventory|added by|profile updated/i.test(text);
+
+  if (isBlocked) return false;
+  if (role === 'pharmacist' && !isMedicineAlert) return false;
+  if ((role === 'doctor' || role === 'hospitalStaff') && !isDiseaseAlert && !isMedicineAlert) return false;
+
+  return isMedicineAlert || isDiseaseAlert;
+};
+
+export const markAlertsAsSeen = (alertIds = []) => {
+  const alerts = JSON.parse(localStorage.getItem('alerts') || '[]');
+  const ids = Array.isArray(alertIds) ? alertIds : [alertIds];
+  const remaining = (Array.isArray(alerts) ? alerts : []).filter(alert => !ids.includes(alert.id));
+  localStorage.setItem('alerts', JSON.stringify(remaining));
+  return remaining;
+};
+
 export const getAlerts = () => {
   const raw = JSON.parse(localStorage.getItem('alerts') || '[]');
   const list = Array.isArray(raw) && raw.length > 0 ? raw : mockAlerts;
-  return list.map(a => {
-    const text = `${a.title || ''} ${a.description || ''} ${a.message || ''}`.toLowerCase();
-    const isMed = a.category === 'medicine' || /medicine|stock|inventory|expiry|expired|units|paracetamol|amoxicillin|salbutamol|chloroquine|metformin|dispensed/i.test(text);
-    return {
-      ...a,
-      title: a.title || (isMed ? 'Medicine Inventory Alert' : 'Clinical Disease Alert'),
-      description: a.description || a.message || 'Alert notification recorded in system.',
-      message: a.message || a.description || 'Alert notification.',
-      category: a.category || (isMed ? 'medicine' : 'disease'),
-      severity: a.severity || a.type || 'Info',
-      type: a.type || a.severity || 'Info'
-    };
-  });
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+  return list
+    .filter(alert => {
+      if (!alert || alert.read) return false;
+      if (alert.date) {
+        const alertDate = new Date(alert.date.replace(' ', 'T')).getTime();
+        if (!Number.isNaN(alertDate) && alertDate < sevenDaysAgo) return false;
+      }
+      return shouldIncludeAlert(alert);
+    })
+    .map(a => {
+      const text = `${a.title || ''} ${a.description || ''} ${a.message || ''}`.toLowerCase();
+      const isMed = a.category === 'medicine' || /medicine|stock|inventory|expiry|expired|units|paracetamol|amoxicillin|salbutamol|chloroquine|metformin|dispensed/i.test(text);
+      return {
+        ...a,
+        title: a.title || (isMed ? 'Medicine Inventory Alert' : 'Clinical Disease Alert'),
+        description: a.description || a.message || 'Alert notification recorded in system.',
+        message: a.message || a.description || 'Alert notification.',
+        category: a.category || (isMed ? 'medicine' : 'disease'),
+        severity: a.severity || a.type || 'Info',
+        type: a.type || a.severity || 'Info'
+      };
+    });
 };
 
 export const addAlert = (type, message, role = 'hospitalStaff', title = '', category = '') => {
+  if (!message || !isMeaningfulAlertMessage(message)) {
+    return null;
+  }
+
+  const isMed = category === 'medicine' || /medicine|stock|inventory|expiry|expired|out of stock|low stock|units|reorder|dispensed/i.test(message);
+  const isDisease = category === 'disease' || /disease|outbreak|risk|forecast|epidemic|diagnosis|symptom|critical|infection|season|surveillance/.test(message);
+
+  if (!isMed && !isDisease) {
+    return null;
+  }
+
   const alerts = getAlerts();
-  const isMed = category === 'medicine' || /medicine|stock|inventory|expiry|expired|units|paracetamol|amoxicillin|salbutamol|chloroquine|metformin|dispensed/i.test(message);
+  const duplicateKey = `${(title || (isMed ? 'Medicine Stock Update' : 'Clinical Disease Alert')).trim()}::${String(message).trim()}`;
+  if (alerts.some(alert => `${alert.title || ''}::${alert.message || alert.description || ''}` === duplicateKey)) {
+    return null;
+  }
+
   const newAlert = {
     id: 'A' + Date.now() + Math.floor(Math.random() * 100),
-    title: title || (isMed ? 'Medicine Stock Update' : 'System Clinical Alert'),
+    title: title || (isMed ? 'Medicine Stock Update' : 'Clinical Disease Alert'),
     description: message,
     message,
     category: category || (isMed ? 'medicine' : 'disease'),
     type: type || 'Info',
     severity: type || 'Info',
     date: new Date().toISOString().replace('T', ' ').slice(0, 16),
-    role
+    role,
+    read: false
   };
   
   alerts.unshift(newAlert);

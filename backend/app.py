@@ -1,34 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from router.prediction import router as prediction_router
-from predict import predict_outbreak
-from patients import router as patient_router
 from sqlalchemy import text
+
 from database import engine
-from stock_alerts import generate_medicine_alerts
-from alert_generator import generate_all_alerts
-from router.alerts import router as alerts_router
-
-
-
+from router.prediction import router as prediction_router
+from patients import router as patient_router
 from medicines import (
     router as medicine_router,
     get_medicine_requirement
 )
-
 from notifications import router as notification_router
-
-from schemas import PredictionRequest
-
-from predict import predict_outbreak
-
-from alerts import router as alert_router
-
-from dashboard import dashboard
-
 from prescriptions import router as prescription_router
-
-from router.alerts import router as alerts_router
+from alerts import router as alert_router
+from schemas import PredictionRequest
+from predict import predict_outbreak
+from dashboard import dashboard
+from stock_alerts import generate_medicine_alerts
+from alert_generator import generate_all_alerts
 
 
 
@@ -74,8 +62,6 @@ app.include_router(prescription_router)
 app.include_router(alert_router)
 
 app.include_router(prediction_router)
-
-app.include_router(alerts_router)
 
 
 

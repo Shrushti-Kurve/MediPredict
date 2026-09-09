@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaBars, FaBell } from 'react-icons/fa';
-import { getLoggedInUser } from '../../services/localStorageService';
+import { getLoggedInUser, markAlertsAsSeen } from '../../services/localStorageService';
 import { getRoleAlerts } from '../../services/api/alertService';
 import logo from '../../assets/logo/logo.png';
 import './DashboardHeader.css';
@@ -10,6 +10,7 @@ const DashboardHeader = ({ title, toggleSidebar }) => {
   const user = getLoggedInUser();
   const displayName = user?.name?.trim() || 'Doctor';
   const notificationRef = useRef(null);
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -78,6 +79,24 @@ const DashboardHeader = ({ title, toggleSidebar }) => {
 
   const notificationCount = notifications.length;
 
+  const getAlertRoute = (notification) => {
+    if (notification?.link) return notification.link;
+    if (!user?.role) return '/doctor/alerts';
+    if (user.role === 'doctor') return '/doctor/alerts';
+    if (user.role === 'hospitalStaff') return '/hospital/alerts';
+    if (user.role === 'pharmacist') return '/pharmacist/alerts';
+    if (user.role === 'admin') return '/admin/alerts';
+    return '/doctor/alerts';
+  };
+
+  const handleNotificationClick = (alert) => {
+    if (alert?.id) {
+      markAlertsAsSeen([alert.id]);
+      setNotifications(prev => prev.filter(item => item.id !== alert.id));
+    }
+    setShowNotifications(false);
+  };
+
   return (
     <header className="dashboard-header">
       <div className="db-header-left">
@@ -117,14 +136,20 @@ const DashboardHeader = ({ title, toggleSidebar }) => {
                 <div className="db-notification-list">
                   {notifications.length > 0 ? (
                     notifications.map((alert) => (
-                      <div key={alert.id} className="db-notification-item">
+                      <Link
+                        key={alert.id}
+                        to={getAlertRoute(alert)}
+                        className="db-notification-item"
+                        onClick={() => handleNotificationClick(alert)}
+                        style={{ textDecoration: 'none', color: 'inherit' }}
+                      >
                         <div className={`db-notification-dot db-notification-${alert.severity.toLowerCase()}`} />
                         <div className="db-notification-copy">
                           <strong>{alert.title}</strong>
                           <p>{alert.description}</p>
                           <span>{alert.date || 'Recent update'}</span>
                         </div>
-                      </div>
+                      </Link>
                     ))
                   ) : (
                     <div className="db-notification-empty">No new alerts.</div>

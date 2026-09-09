@@ -29,6 +29,9 @@ class PatientCreate(BaseModel):
     Gender: Optional[str] = None
     Village: Optional[str] = None
     Visit_Date: Optional[str] = None
+    Disease: Optional[str] = None
+    Symptoms: Optional[str] = None
+    Doctor: Optional[str] = None
 
 
 # =========================================================

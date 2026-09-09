@@ -630,19 +630,15 @@ const DoctorPatients = () => {
                               {/* MEDICINE SELECT */}
                               <div className="form-group med-name-field">
                                 <label>Medicine Name *</label>
-                                <select
+                                <input
+                                  type="text"
+                                  list="medicineOptionsList"
                                   className="form-control"
-                                  value={med.medicineId || med.name}
+                                  placeholder="Type medicine name, stock status, or expiry"
+                                  value={med.name}
                                   onChange={(e) => handleMedicineSelect(index, e.target.value)}
                                   required
-                                >
-                                  <option value="">-- Choose Medicine from Stock --</option>
-                                  {pharmacyStock.map(medicine => (
-                                    <option key={medicine.id} value={medicine.id}>
-                                      {medicine.name} ({medicine.category}) — Stock: {medicine.quantity}
-                                    </option>
-                                  ))}
-                                </select>
+                                />
                               </div>
 
                               {/* DOSAGE */}
@@ -750,6 +746,25 @@ const DoctorPatients = () => {
           )}
 
           {/* DATALISTS */}
+          <datalist id="medicineOptionsList">
+            {pharmacyStock.map((medicine) => {
+              const quantity = Number(medicine.quantity || 0);
+              const minimum = Number(medicine.minimumStock || 0);
+              let stockStatus = 'Available';
+              if (quantity === 0) stockStatus = 'Out of Stock';
+              else if (quantity <= minimum) stockStatus = 'Low Stock';
+
+              const expiryDate = medicine.expiryDate || 'Not set';
+              const expiryStatus = expiryDate && expiryDate !== 'Not set' && new Date(expiryDate) < new Date() ? 'Expired' : 'Valid';
+
+              return (
+                <option key={medicine.id} value={medicine.name}>
+                  {medicine.name} — {stockStatus} • {expiryStatus} • Expires {expiryDate}
+                </option>
+              );
+            })}
+          </datalist>
+
           <datalist id="frequencyOptionsList">
             {FREQUENCY_OPTIONS.map((freq, i) => (
               <option key={i} value={freq} />

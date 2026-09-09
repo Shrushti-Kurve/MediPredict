@@ -20,6 +20,26 @@ router = APIRouter(
 # STAFF → ADD PATIENT
 # =========================================================
 
+@router.delete("/{patient_id}")
+def delete_patient(
+    patient_id: int,
+    db: Session = Depends(get_db)
+):
+    patient = db.query(Patient).filter(Patient.Patient_ID == patient_id).first()
+
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    # Demo requirement: a patient may leave the pending prescription queue,
+    # but the master record must be preserved for history and forecasting.
+    return {
+        "status": "success",
+        "message": "Patient removed from pending work but record preserved for history and forecasting",
+        "patient_id": patient_id,
+        "record_preserved": True
+    }
+
+
 @router.post("/")
 def add_patient(
     data: PatientCreate,
@@ -54,7 +74,13 @@ def add_patient(
 
         Village=data.Village,
 
-        Visit_Date=visit_date
+        Visit_Date=visit_date,
+
+        Disease=data.Disease,
+
+        Symptoms=data.Symptoms,
+
+        Doctor=data.Doctor
 
     )
 

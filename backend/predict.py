@@ -855,6 +855,7 @@ from collections import Counter
 
 from sqlalchemy import text
 from database import engine
+from notifications import create_notification_for_alert
 
 
 # =========================================================
@@ -972,7 +973,7 @@ def create_disease_alert(
     risk
 ):
 
-    if risk == "DANGER":
+    if risk in ("DANGER", "HIGH"):
         severity = "HIGH"
 
     elif risk == "MEDIUM":
@@ -1007,7 +1008,7 @@ def create_disease_alert(
     if existing:
         return
 
-    connection.execute(
+    result = connection.execute(
         text("""
             INSERT INTO alerts
             (
@@ -1040,6 +1041,16 @@ def create_disease_alert(
             "severity": severity,
             "message": message
         }
+    )
+
+    alert_id = getattr(result, "lastrowid", None)
+    create_notification_for_alert(
+        connection,
+        alert_id,
+        f"Disease risk: {disease}",
+        message,
+        severity,
+        "/alerts",
     )
 
 
@@ -1149,7 +1160,7 @@ def create_medicine_alerts(connection):
         # INSERT ALERT
         # -------------------------------------------------
 
-        connection.execute(
+        result = connection.execute(
             text("""
                 INSERT INTO alerts
                 (
@@ -1182,6 +1193,16 @@ def create_medicine_alerts(connection):
                 "severity": severity,
                 "message": message
             }
+        )
+
+        alert_id = getattr(result, "lastrowid", None)
+        create_notification_for_alert(
+            connection,
+            alert_id,
+            f"Medicine alert: {name}",
+            message,
+            severity,
+            "/alerts",
         )
 
         alerts.append({
@@ -1397,8 +1418,8 @@ def run_automatic_prediction():
                     }
                 )
 
-                # ALERT ONLY FOR MEDIUM / DANGER
-                if risk in ("MEDIUM", "DANGER"):
+                # DEMO FLOW: after 2 completed cases, warn on medium or high risk.
+                if risk in ("MEDIUM", "HIGH"):
                     create_disease_alert(
                         connection,
                         disease,
