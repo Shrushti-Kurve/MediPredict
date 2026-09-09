@@ -13,6 +13,8 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [fieldErrors, setFieldErrors] = useState({ email: '', password: '' });
+
   React.useEffect(() => {
     const user = getLoggedInUser();
     if (user) {
@@ -23,12 +25,32 @@ const Login = () => {
     }
   }, [navigate]);
 
+  const validateForm = () => {
+    const errors = {};
+    const emailTrimmed = email.trim();
+
+    if (!emailTrimmed) {
+      errors.email = 'Please enter your email.';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailTrimmed)) {
+        errors.email = 'Please enter a valid email address.';
+      }
+    }
+
+    if (!password) {
+      errors.password = 'Please enter your password.';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
 
-    if (!email || !password) {
-      setError('Please fill in all fields.');
+    if (!validateForm()) {
       return;
     }
 
@@ -110,12 +132,16 @@ const Login = () => {
                   <input
                     type="email"
                     id="email"
-                    className="auth-input-field"
+                    className={`auth-input-field ${fieldErrors.email ? 'auth-input-error' : ''}`}
                     placeholder="doctor@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: '' }));
+                    }}
                   />
                 </div>
+                {fieldErrors.email && <span className="auth-field-error-text">{fieldErrors.email}</span>}
               </div>
 
               <div className="auth-form-group">
@@ -130,10 +156,13 @@ const Login = () => {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     id="password"
-                    className="auth-input-field"
+                    className={`auth-input-field ${fieldErrors.password ? 'auth-input-error' : ''}`}
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: '' }));
+                    }}
                   />
                   <button
                     type="button"
@@ -144,6 +173,7 @@ const Login = () => {
                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
+                {fieldErrors.password && <span className="auth-field-error-text">{fieldErrors.password}</span>}
               </div>
 
               <button type="submit" className="btn btn-primary auth-submit-btn" disabled={loading}>

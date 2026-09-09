@@ -6,9 +6,6 @@ import {
   FaUsers, 
   FaSearch, 
   FaUserPlus, 
-  FaUserMd, 
-  FaUserNurse, 
-  FaPills, 
   FaTimes
 } from 'react-icons/fa';
 import './AdminUsers.css';
@@ -149,49 +146,6 @@ const AdminUsers = () => {
             >
               <FaUserPlus /> Add New User
             </button>
-          </div>
-
-          {/* User Metrics Summary */}
-          <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-primary">
-                <FaUsers />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Total Registered</span>
-                <span className="stat-number">{roleCounts.all}</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-primary">
-                <FaUserMd />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Doctors</span>
-                <span className="stat-number">{roleCounts.doctor}</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-secondary">
-                <FaUserNurse />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Hospital Staff</span>
-                <span className="stat-number">{roleCounts.hospitalStaff}</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-warning">
-                <FaPills />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Pharmacists</span>
-                <span className="stat-number">{roleCounts.pharmacist}</span>
-              </div>
-            </div>
           </div>
 
           {/* Controls Bar: Search & Role Filter Tabs */}

@@ -84,49 +84,6 @@ const AdminMedicines = () => {
             </div>
           </div>
 
-          {/* Stats Grid */}
-          <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-primary">
-                <FaBoxes />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Total Catalogued</span>
-                <span className="stat-number">{stats.total}</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-success">
-                <FaCheckCircle />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Available Stocks</span>
-                <span className="stat-number">{stats.available}</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-warning">
-                <FaExclamationTriangle />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Low Stock Items</span>
-                <span className="stat-number">{stats.low}</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-danger">
-                <FaTimesCircle />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Stockout / Depleted</span>
-                <span className="stat-number">{stats.out}</span>
-              </div>
-            </div>
-          </div>
-
           {/* Controls Bar */}
           <div className="admin-controls-bar">
             <div className="search-bar-wrapper admin-search-wrapper">

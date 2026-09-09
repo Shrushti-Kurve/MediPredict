@@ -11,6 +11,62 @@
   flex-wrap: wrap;
 }
 
+.alerts-two-box-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .alerts-two-box-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.alert-category-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.alert-category-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.85rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.alert-category-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.alert-category-badge {
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.alerts-empty-state-mini {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+  background: var(--background);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
 .admin-alerts-container {
   background-color: var(--surface);
   border-radius: var(--radius-md);

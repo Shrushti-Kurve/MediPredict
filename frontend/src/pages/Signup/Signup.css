@@ -31,6 +31,19 @@
   border: 1px solid rgba(22, 163, 74, 0.15);
 }
 
+.auth-input-error {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
+}
+
+.auth-field-error-text {
+  color: #dc2626;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+  display: block;
+}
+
 @media (max-width: 900px) {
   .auth-form-row {
     grid-template-columns: 1fr;

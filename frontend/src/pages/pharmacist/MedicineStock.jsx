@@ -4,14 +4,27 @@ import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
 import { 
   getMedicines, 
   addMedicine, 
-  updateMedicine 
+  updateMedicine,
+  dispenseMedicine,
+  getPatients
 } from '../../services/localStorageService';
-import { FaSearch, FaPlus, FaEye, FaEdit, FaPlusCircle, FaTimes } from 'react-icons/fa';
+import { 
+  FaSearch, 
+  FaPlus, 
+  FaEye, 
+  FaEdit, 
+  FaPlusCircle, 
+  FaTimes,
+  FaHandHoldingMedical,
+  FaCheckCircle,
+  FaExclamationTriangle
+} from 'react-icons/fa';
 import './MedicineStock.css';
 
 const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitle = 'Monitor stock, expiry, and availability at a glance.' }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [medicines, setMedicines] = useState([]);
+  const [patients, setPatients] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modals state
@@ -19,6 +32,7 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [qtyModalOpen, setQtyModalOpen] = useState(false);
+  const [dispenseModalOpen, setDispenseModalOpen] = useState(false);
 
   const [selectedMed, setSelectedMed] = useState(null);
   const canEdit = !readOnly;
@@ -28,6 +42,7 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
     id: '',
     name: '',
     category: '',
+    description: '',
     quantity: 0,
     minimumStock: 0,
     expiryDate: '',
@@ -36,12 +51,22 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
 
   const [qtyValue, setQtyValue] = useState(0);
 
+  // Dispense Form State
+  const [dispenseForm, setDispenseForm] = useState({
+    quantity: 1,
+    patientName: '',
+    notes: ''
+  });
+  const [dispenseError, setDispenseError] = useState('');
+  const [dispenseSuccess, setDispenseSuccess] = useState('');
+
   const loadMedicines = () => {
     setMedicines(getMedicines());
   };
 
   useEffect(() => {
     loadMedicines();
+    setPatients(getPatients() || []);
   }, []);
 
   const handleSearchChange = (e) => {
@@ -59,13 +84,14 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
   const handleOpenAddModal = () => {
     // Generate next ID
     const nextNum = medicines.length > 0 
-      ? Math.max(...medicines.map(m => parseInt(m.id.replace('M', '')))) + 1 
+      ? Math.max(...medicines.map(m => parseInt(m.id.replace('M', '')) || 2000)) + 1 
       : 2011;
 
     setMedForm({
       id: `M${nextNum}`,
       name: '',
       category: '',
+      description: '',
       quantity: 0,
       minimumStock: 0,
       expiryDate: '',
@@ -77,7 +103,7 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
   const handleAddSubmit = (e) => {
     e.preventDefault();
     if (!medForm.name || !medForm.category || !medForm.supplier || !medForm.expiryDate) {
-      alert('Please fill out all fields.');
+      alert('Please fill out all required fields.');
       return;
     }
     
@@ -89,14 +115,17 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
 
   const handleOpenEditModal = (med) => {
     setSelectedMed(med);
-    setMedForm({ ...med });
+    setMedForm({ 
+      ...med,
+      description: med.description || ''
+    });
     setEditModalOpen(true);
   };
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
     if (!medForm.name || !medForm.category || !medForm.supplier || !medForm.expiryDate) {
-      alert('Please fill out all fields.');
+      alert('Please fill out all required fields.');
       return;
     }
 
@@ -125,6 +154,52 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
       setQtyModalOpen(false);
       setSelectedMed(null);
       alert('Medicine stock quantity updated successfully.');
+    }
+  };
+
+  // Dispense Handlers
+  const handleOpenDispenseModal = (med) => {
+    setSelectedMed(med);
+    setDispenseForm({
+      quantity: 1,
+      patientName: '',
+      notes: ''
+    });
+    setDispenseError('');
+    setDispenseSuccess('');
+    setDispenseModalOpen(true);
+  };
+
+  const handleDispenseSubmit = (e) => {
+    e.preventDefault();
+    setDispenseError('');
+    setDispenseSuccess('');
+
+    const reqQty = parseInt(dispenseForm.quantity);
+    if (isNaN(reqQty) || reqQty <= 0) {
+      setDispenseError('Please enter a valid quantity greater than 0.');
+      return;
+    }
+
+    const available = parseInt(selectedMed?.quantity) || 0;
+    if (reqQty > available) {
+      setDispenseError(`Insufficient stock available. Only ${available} units currently in stock.`);
+      return;
+    }
+
+    try {
+      const updated = dispenseMedicine(selectedMed.id, reqQty, dispenseForm.patientName);
+      loadMedicines();
+      setSelectedMed(updated);
+      setDispenseSuccess(`Successfully dispensed ${reqQty} units of ${selectedMed.name}. Remaining stock: ${updated.quantity} units.`);
+      
+      setTimeout(() => {
+        setDispenseModalOpen(false);
+        setDispenseSuccess('');
+        setSelectedMed(null);
+      }, 1200);
+    } catch (err) {
+      setDispenseError(err.message || 'Failed to dispense medicine.');
     }
   };
 
@@ -212,7 +287,11 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
                         <td className="font-weight-600">{med.id}</td>
                         <td className="font-weight-600">{med.name}</td>
                         <td>{med.category}</td>
-                        <td className="font-weight-600">{med.quantity}</td>
+                        <td className="font-weight-600">
+                          <span style={{ color: parseInt(med.quantity) === 0 ? '#dc2626' : (parseInt(med.quantity) <= parseInt(med.minimumStock) ? '#d97706' : '#0f766e') }}>
+                            {med.quantity}
+                          </span>
+                        </td>
                         <td>{med.minimumStock}</td>
                         <td>{med.expiryDate}</td>
                         <td>{med.supplier}</td>
@@ -226,12 +305,21 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
                             <button 
                               className="btn-action btn-view" 
                               onClick={() => { setSelectedMed(med); setViewModalOpen(true); }}
-                              title="View Details"
+                              title="View Details & Uses"
                             >
                               <FaEye /> View
                             </button>
                             {canEdit && (
                               <>
+                                <button 
+                                  className="btn-action btn-dispense" 
+                                  onClick={() => handleOpenDispenseModal(med)}
+                                  title="Dispense to Patient"
+                                  disabled={parseInt(med.quantity) === 0}
+                                  style={{ opacity: parseInt(med.quantity) === 0 ? 0.5 : 1, cursor: parseInt(med.quantity) === 0 ? 'not-allowed' : 'pointer' }}
+                                >
+                                  <FaHandHoldingMedical /> Dispense
+                                </button>
                                 <button 
                                   className="btn-action btn-edit" 
                                   onClick={() => handleOpenEditModal(med)}
@@ -262,10 +350,10 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
             )}
           </div>
 
-          {/* VIEW DETAILS MODAL */}
+          {/* VIEW DETAILS MODAL (Includes Requirement 3: Medicine Description / Uses) */}
           {viewModalOpen && selectedMed && (
             <div className="modal-overlay">
-              <div className="modal-content">
+              <div className="modal-content" style={{ maxWidth: '620px' }}>
                 <div className="modal-header">
                   <h3>Medicine Information: {selectedMed.name}</h3>
                   <button className="modal-close-btn" onClick={() => setViewModalOpen(false)}>
@@ -283,7 +371,7 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
                       <span className="detail-val">{selectedMed.name}</span>
                     </div>
                     <div className="detail-field">
-                      <span className="detail-label">Category</span>
+                      <span className="detail-label">Medicine Type / Category</span>
                       <span className="detail-val">{selectedMed.category}</span>
                     </div>
                     <div className="detail-field">
@@ -312,11 +400,118 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
                         </span>
                       </span>
                     </div>
+                    
+                    {/* MEDICINE DESCRIPTION / USES (Requirement 3) */}
+                    <div className="detail-field detail-field-full" style={{ marginTop: '0.5rem' }}>
+                      <span className="detail-label">Medicine Description / Uses</span>
+                      <p className="detail-description-text">
+                        {selectedMed.description || 'Used for therapeutic clinical management and treatment.'}
+                      </p>
+                    </div>
                   </div>
                 </div>
                 <div className="modal-footer">
+                  {canEdit && parseInt(selectedMed.quantity) > 0 && (
+                    <button 
+                      className="btn btn-primary" 
+                      onClick={() => { setViewModalOpen(false); handleOpenDispenseModal(selectedMed); }}
+                      style={{ marginRight: 'auto' }}
+                    >
+                      <FaHandHoldingMedical /> Dispense Medicine
+                    </button>
+                  )}
                   <button className="btn btn-secondary" onClick={() => setViewModalOpen(false)}>Close</button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* DISPENSE MEDICINE MODAL (Requirement 7: Pharmacist Stock Deduction) */}
+          {canEdit && dispenseModalOpen && selectedMed && (
+            <div className="modal-overlay">
+              <div className="modal-content" style={{ maxWidth: '480px' }}>
+                <div className="modal-header">
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaHandHoldingMedical className="text-primary" /> Dispense Medicine
+                  </h3>
+                  <button className="modal-close-btn" onClick={() => setDispenseModalOpen(false)}>
+                    <FaTimes />
+                  </button>
+                </div>
+                <form onSubmit={handleDispenseSubmit}>
+                  <div className="modal-body">
+                    {dispenseError && (
+                      <div className="auth-message auth-message-error" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <FaExclamationTriangle /> {dispenseError}
+                      </div>
+                    )}
+                    {dispenseSuccess && (
+                      <div className="auth-message auth-message-success" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <FaCheckCircle /> {dispenseSuccess}
+                      </div>
+                    )}
+
+                    <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '10px', marginBottom: '1rem', border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>MEDICINE</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>{selectedMed.name}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#0f766e', fontWeight: 700, marginTop: '2px' }}>
+                        Available in Stock: <strong>{selectedMed.quantity} units</strong>
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="dispense-qty">Quantity to Dispense *</label>
+                      <input
+                        type="number"
+                        id="dispense-qty"
+                        className="form-control"
+                        min="1"
+                        max={selectedMed.quantity}
+                        value={dispenseForm.quantity}
+                        onChange={(e) => setDispenseForm({ ...dispenseForm, quantity: parseInt(e.target.value) || 0 })}
+                        required
+                        autoFocus
+                      />
+                      <small className="text-muted">Deducted immediately from current inventory.</small>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="dispense-patient">Patient Name / Record (Optional)</label>
+                      <input
+                        type="text"
+                        id="dispense-patient"
+                        className="form-control"
+                        placeholder="e.g. Ramesh Kumar (P1001)"
+                        value={dispenseForm.patientName}
+                        onChange={(e) => setDispenseForm({ ...dispenseForm, patientName: e.target.value })}
+                        list="patient-names-list"
+                      />
+                      <datalist id="patient-names-list">
+                        {patients.map(p => (
+                          <option key={p.id} value={`${p.name} (${p.id})`} />
+                        ))}
+                      </datalist>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="dispense-notes">Dispensing Notes / Dosage (Optional)</label>
+                      <input
+                        type="text"
+                        id="dispense-notes"
+                        className="form-control"
+                        placeholder="e.g. Course for 5 days post-meal"
+                        value={dispenseForm.notes}
+                        onChange={(e) => setDispenseForm({ ...dispenseForm, notes: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="modal-footer">
+                    <button type="button" className="btn btn-secondary" onClick={() => setDispenseModalOpen(false)}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" disabled={parseInt(selectedMed.quantity) === 0}>
+                      Confirm & Deduct Stock
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}
@@ -340,19 +535,31 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
                       </div>
                       <div className="form-group">
                         <label htmlFor="name">Medicine Name *</label>
-                        <input type="text" id="name" className="form-control" value={medForm.name} onChange={handleInputChange} required />
+                        <input type="text" id="name" className="form-control" placeholder="e.g. Paracetamol" value={medForm.name} onChange={handleInputChange} required />
                       </div>
                     </div>
 
                     <div className="form-row">
                       <div className="form-group">
                         <label htmlFor="category">Category *</label>
-                        <input type="text" id="category" className="form-control" placeholder="e.g. Antibiotic" value={medForm.category} onChange={handleInputChange} required />
+                        <input type="text" id="category" className="form-control" placeholder="e.g. Analgesic / Antibiotic" value={medForm.category} onChange={handleInputChange} required />
                       </div>
                       <div className="form-group">
                         <label htmlFor="supplier">Supplier *</label>
-                        <input type="text" id="supplier" className="form-control" value={medForm.supplier} onChange={handleInputChange} required />
+                        <input type="text" id="supplier" className="form-control" placeholder="e.g. RuralPharma Ltd." value={medForm.supplier} onChange={handleInputChange} required />
                       </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="description">Medicine Description / Uses</label>
+                      <textarea
+                        id="description"
+                        className="form-control"
+                        rows="2"
+                        placeholder="e.g. Used to reduce fever and relieve mild to moderate pain."
+                        value={medForm.description}
+                        onChange={handleInputChange}
+                      />
                     </div>
 
                     <div className="form-row">
@@ -412,6 +619,18 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
                         <label htmlFor="supplier">Supplier *</label>
                         <input type="text" id="supplier" className="form-control" value={medForm.supplier} onChange={handleInputChange} required />
                       </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="description">Medicine Description / Uses</label>
+                      <textarea
+                        id="description"
+                        className="form-control"
+                        rows="2"
+                        placeholder="e.g. Used to reduce fever and relieve mild to moderate pain."
+                        value={medForm.description}
+                        onChange={handleInputChange}
+                      />
                     </div>
 
                     <div className="form-row">

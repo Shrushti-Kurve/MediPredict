@@ -18,7 +18,6 @@ const AdminAlerts = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSeverity, setSelectedSeverity] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -49,30 +48,39 @@ const AdminAlerts = () => {
     return 'Info';
   };
 
-  const getAlertCategory = (alert) => {
-    const msg = (alert.message || alert.Alert_Message || alert.description || '').toLowerCase();
-    const cat = (alert.Alert_Category || alert.category || alert.role || '').toLowerCase();
-    if (cat.includes('medicine') || msg.includes('stock') || msg.includes('medicine') || msg.includes('paracetamol') || msg.includes('amoxicillin')) {
-      return 'medicine';
-    }
-    if (cat.includes('doctor') || cat.includes('patient') || msg.includes('patient') || msg.includes('asthma') || msg.includes('hypertension')) {
-      return 'patient';
-    }
-    return 'system';
+  const isMedicineAlert = (alert) => {
+    const text = `${alert.title || ''} ${alert.description || ''} ${alert.message || ''} ${alert.category || ''}`.toLowerCase();
+    return (
+      alert.category === 'medicine' ||
+      text.includes('medicine') ||
+      text.includes('stock') ||
+      text.includes('inventory') ||
+      text.includes('expiry') ||
+      text.includes('expired') ||
+      text.includes('paracetamol') ||
+      text.includes('amoxicillin') ||
+      text.includes('salbutamol') ||
+      text.includes('chloroquine') ||
+      text.includes('atorvastatin') ||
+      text.includes('rifampicin') ||
+      text.includes('metformin') ||
+      text.includes('dispensed')
+    );
   };
 
   const filteredAlerts = alerts.filter((alert) => {
     const severity = getAlertSeverity(alert);
-    const category = getAlertCategory(alert);
     const msg = (alert.message || alert.Alert_Message || alert.title || alert.description || '').toLowerCase();
     const query = searchQuery.toLowerCase().trim();
 
     const matchesSearch = !query || msg.includes(query);
-    const matchesCategory = selectedCategory === 'all' || category === selectedCategory;
     const matchesSeverity = selectedSeverity === 'all' || severity.toLowerCase() === selectedSeverity.toLowerCase();
 
-    return matchesSearch && matchesCategory && matchesSeverity;
+    return matchesSearch && matchesSeverity;
   });
+
+  const medicineAlerts = filteredAlerts.filter(isMedicineAlert);
+  const diseaseAlerts = filteredAlerts.filter(a => !isMedicineAlert(a));
 
   const getAlertIcon = (severity) => {
     switch (severity) {
@@ -100,8 +108,44 @@ const AdminAlerts = () => {
     total: alerts.length,
     critical: alerts.filter(a => getAlertSeverity(a) === 'Critical').length,
     warning: alerts.filter(a => getAlertSeverity(a) === 'Warning').length,
-    medicine: alerts.filter(a => getAlertCategory(a) === 'medicine').length,
-    patient: alerts.filter(a => getAlertCategory(a) === 'patient').length
+    medicine: alerts.filter(isMedicineAlert).length,
+    disease: alerts.filter(a => !isMedicineAlert(a)).length
+  };
+
+  const renderAlertCard = (alert) => {
+    const severity = getAlertSeverity(alert);
+    const isMed = isMedicineAlert(alert);
+    return (
+      <div 
+        key={alert.id} 
+        className={`admin-alert-card border-${severity.toLowerCase()}`}
+      >
+        <div className="admin-alert-card-main">
+          <div className="admin-alert-icon-col">
+            {getAlertIcon(severity)}
+          </div>
+          <div className="admin-alert-text-col">
+            <div className="admin-alert-topline">
+              <span className={getAlertBadgeClass(severity)}>
+                {severity}
+              </span>
+              <span className="admin-alert-category-tag">
+                {isMed ? 'Medicine Inventory' : 'Disease & Clinical'}
+              </span>
+              <span className="admin-alert-time">
+                {alert.date || alert.Alert_Date || 'Recent'}
+              </span>
+            </div>
+            <h4 style={{ margin: '0.25rem 0 0.15rem', fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+              {alert.title || alert.message}
+            </h4>
+            <p className="admin-alert-body">
+              {alert.description || alert.message || alert.Alert_Message}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -117,7 +161,7 @@ const AdminAlerts = () => {
             <div>
               <h2 className="admin-page-title">Master System Alerts & Notifications</h2>
               <p className="admin-page-subtitle">
-                Real-time monitoring of pharmaceutical stockouts, clinical emergency flags, and hospital facility updates.
+                Real-time monitoring of pharmaceutical stockouts, clinical disease trends, and facility updates.
               </p>
             </div>
             <button 
@@ -129,158 +173,95 @@ const AdminAlerts = () => {
             </button>
           </div>
 
-          {/* Alert Metric Cards */}
-          <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-primary">
-                <FaBell />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Total System Alerts</span>
-                <span className="stat-number">{stats.total}</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-danger">
-                <FaTimesCircle />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Critical Conditions</span>
-                <span className="stat-number">{stats.critical}</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-warning">
-                <FaPills />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Medicine Stock Alerts</span>
-                <span className="stat-number">{stats.medicine}</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-success">
-                <FaHeartbeat />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Patient Clinical Flags</span>
-                <span className="stat-number">{stats.patient}</span>
-              </div>
-            </div>
-          </div>
-
           {/* Filter and Search Bar */}
           <div className="admin-alerts-controls">
             <div className="search-bar-wrapper admin-search-wrapper">
               <FaSearch className="search-icon" />
               <input
                 type="text"
-                placeholder="Search alerts by medicine, disease or message..."
+                placeholder="Search alerts by medicine, disease, or symptoms..."
                 className="form-control search-input"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
-            <div className="admin-alerts-filters">
-              {/* Category Filter */}
-              <div className="admin-filter-tabs">
-                <button 
-                  className={`admin-filter-tab ${selectedCategory === 'all' ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory('all')}
-                >
-                  All Categories ({stats.total})
-                </button>
-                <button 
-                  className={`admin-filter-tab ${selectedCategory === 'medicine' ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory('medicine')}
-                >
-                  Medicine Stock ({stats.medicine})
-                </button>
-                <button 
-                  className={`admin-filter-tab ${selectedCategory === 'patient' ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory('patient')}
-                >
-                  Patient Care ({stats.patient})
-                </button>
-                <button 
-                  className={`admin-filter-tab ${selectedCategory === 'system' ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory('system')}
-                >
-                  System Info
-                </button>
-              </div>
-
-              {/* Severity Filter */}
-              <div className="admin-filter-tabs">
-                <button 
-                  className={`admin-filter-tab ${selectedSeverity === 'all' ? 'active' : ''}`}
-                  onClick={() => setSelectedSeverity('all')}
-                >
-                  All Severities
-                </button>
-                <button 
-                  className={`admin-filter-tab ${selectedSeverity === 'critical' ? 'active' : ''}`}
-                  onClick={() => setSelectedSeverity('critical')}
-                >
-                  Critical ({stats.critical})
-                </button>
-                <button 
-                  className={`admin-filter-tab ${selectedSeverity === 'warning' ? 'active' : ''}`}
-                  onClick={() => setSelectedSeverity('warning')}
-                >
-                  Warning ({stats.warning})
-                </button>
-              </div>
+            {/* Severity Filter Tabs */}
+            <div className="admin-filter-tabs">
+              <button 
+                className={`admin-filter-tab ${selectedSeverity === 'all' ? 'active' : ''}`}
+                onClick={() => setSelectedSeverity('all')}
+              >
+                All Severities
+              </button>
+              <button 
+                className={`admin-filter-tab ${selectedSeverity === 'critical' ? 'active' : ''}`}
+                onClick={() => setSelectedSeverity('critical')}
+              >
+                Critical ({stats.critical})
+              </button>
+              <button 
+                className={`admin-filter-tab ${selectedSeverity === 'warning' ? 'active' : ''}`}
+                onClick={() => setSelectedSeverity('warning')}
+              >
+                Warning ({stats.warning})
+              </button>
             </div>
           </div>
 
-          {/* Alerts List Container */}
-          <div className="admin-alerts-container">
-            {filteredAlerts.length > 0 ? (
-              <div className="admin-alerts-list">
-                {filteredAlerts.map((alert) => {
-                  const severity = getAlertSeverity(alert);
-                  return (
-                    <div 
-                      key={alert.id} 
-                      className={`admin-alert-card border-${severity.toLowerCase()}`}
-                    >
-                      <div className="admin-alert-card-main">
-                        <div className="admin-alert-icon-col">
-                          {getAlertIcon(severity)}
-                        </div>
-                        <div className="admin-alert-text-col">
-                          <div className="admin-alert-topline">
-                            <span className={getAlertBadgeClass(severity)}>
-                              {severity}
-                            </span>
-                            <span className="admin-alert-category-tag">
-                              {getAlertCategory(alert) === 'medicine' ? 'Medicine Inventory' : getAlertCategory(alert) === 'patient' ? 'Clinical Patient' : 'Facility System'}
-                            </span>
-                            <span className="admin-alert-time">
-                              {alert.date || alert.Alert_Date || 'Recent'}
-                            </span>
-                          </div>
-                          <p className="admin-alert-body">
-                            {alert.message || alert.Alert_Message || alert.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+          {/* TWO SEPARATE BOXES (Requirement 6) */}
+          <div className="alerts-two-box-layout">
+            {/* BOX 1: MEDICINE ALERTS */}
+            <div className="alert-category-box">
+              <div className="alert-category-box-header">
+                <div className="alert-category-title">
+                  <FaPills style={{ color: '#0f766e', fontSize: '1.35rem' }} />
+                  <span>Medicine Alerts</span>
+                </div>
+                <span className="alert-category-badge" style={{ backgroundColor: '#ccfbf1', color: '#0f766e' }}>
+                  {medicineAlerts.length} Active Alert{medicineAlerts.length !== 1 ? 's' : ''}
+                </span>
               </div>
-            ) : (
-              <div className="empty-state-container" style={{ padding: '3.5rem 1.5rem', textAlign: 'center' }}>
-                <FaBell style={{ fontSize: '3rem', color: '#94a3b8', marginBottom: '1rem' }} />
-                <h3>No alerts match your filter criteria</h3>
-                <p style={{ color: '#64748b' }}>All monitored medical telemetry parameters are within normal thresholds.</p>
+              <p style={{ fontSize: '0.88rem', color: '#64748b', marginBottom: '1rem', marginTop: '-0.5rem' }}>
+                Medicine out of stock, low inventory thresholds, expiry notices, and pharmacy inventory alerts.
+              </p>
+
+              {medicineAlerts.length > 0 ? (
+                <div className="admin-alerts-list">
+                  {medicineAlerts.map(renderAlertCard)}
+                </div>
+              ) : (
+                <div className="alerts-empty-state-mini">
+                  <p>No active medicine alerts found.</p>
+                </div>
+              )}
+            </div>
+
+            {/* BOX 2: DISEASE ALERTS */}
+            <div className="alert-category-box">
+              <div className="alert-category-box-header">
+                <div className="alert-category-title">
+                  <FaHeartbeat style={{ color: '#dc2626', fontSize: '1.35rem' }} />
+                  <span>Disease Alerts</span>
+                </div>
+                <span className="alert-category-badge" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>
+                  {diseaseAlerts.length} Active Alert{diseaseAlerts.length !== 1 ? 's' : ''}
+                </span>
               </div>
-            )}
+              <p style={{ fontSize: '0.88rem', color: '#64748b', marginBottom: '1rem', marginTop: '-0.5rem' }}>
+                Disease trends, outbreaks, high case clusters, patient emergency conditions, and clinical notices.
+              </p>
+
+              {diseaseAlerts.length > 0 ? (
+                <div className="admin-alerts-list">
+                  {diseaseAlerts.map(renderAlertCard)}
+                </div>
+              ) : (
+                <div className="alerts-empty-state-mini">
+                  <p>No active disease alerts found.</p>
+                </div>
+              )}
+            </div>
           </div>
         </main>
       </div>

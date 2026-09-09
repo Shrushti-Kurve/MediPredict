@@ -153,6 +153,17 @@
   color: var(--surface);
 }
 
+.btn-dispense {
+  background-color: #f0fdf4;
+  color: #15803d;
+  border: 1px solid rgba(22, 163, 74, 0.25);
+}
+
+.btn-dispense:hover:not(:disabled) {
+  background-color: #16a34a;
+  color: #ffffff;
+}
+
 .text-center {
   text-align: center !important;
 }
@@ -169,6 +180,10 @@
   flex-direction: column;
 }
 
+.detail-field-full {
+  grid-column: 1 / -1;
+}
+
 .detail-label {
   font-size: 0.75rem;
   font-weight: 600;
@@ -182,6 +197,20 @@
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.detail-description-text {
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--text-primary);
+  background-color: var(--background);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--primary);
+  margin-top: 0.25rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
 }
 
 .highlight-val {

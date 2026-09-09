@@ -431,6 +431,7 @@ export const mockMedicines = [
     id: "M2001",
     name: "Metformin",
     category: "Antidiabetic",
+    description: "Used to control high blood sugar in patients with type 2 diabetes.",
     quantity: 150,
     minimumStock: 50,
     expiryDate: "2027-12-31",
@@ -440,6 +441,7 @@ export const mockMedicines = [
     id: "M2002",
     name: "Amlodipine",
     category: "Antihypertensive",
+    description: "Used to treat high blood pressure (hypertension) and prevent chest pain (angina).",
     quantity: 120,
     minimumStock: 40,
     expiryDate: "2027-06-30",
@@ -449,6 +451,7 @@ export const mockMedicines = [
     id: "M2003",
     name: "Amoxicillin",
     category: "Antibiotic",
+    description: "Antibiotic used to treat a wide variety of bacterial infections including chest and throat infections.",
     quantity: 0,
     minimumStock: 30,
     expiryDate: "2026-11-15",
@@ -458,6 +461,7 @@ export const mockMedicines = [
     id: "M2004",
     name: "Salbutamol Inhaler",
     category: "Bronchodilator",
+    description: "Used to quickly relieve breathing difficulties, wheezing, and chest tightness caused by asthma.",
     quantity: 8,
     minimumStock: 10,
     expiryDate: "2028-02-28",
@@ -467,6 +471,7 @@ export const mockMedicines = [
     id: "M2005",
     name: "Atorvastatin",
     category: "Cardiovascular",
+    description: "Used along with a proper diet to lower 'bad' cholesterol and reduce the risk of heart complications.",
     quantity: 110,
     minimumStock: 30,
     expiryDate: "2027-09-30",
@@ -476,6 +481,7 @@ export const mockMedicines = [
     id: "M2006",
     name: "Levothyroxine",
     category: "Thyroid Hormone",
+    description: "Used to treat hypothyroidism (underactive thyroid gland) to restore normal hormone levels.",
     quantity: 45,
     minimumStock: 40,
     expiryDate: "2027-05-15",
@@ -485,6 +491,7 @@ export const mockMedicines = [
     id: "M2007",
     name: "Chloroquine",
     category: "Antimalarial",
+    description: "Used to prevent and treat malaria caused by mosquito bites in rural sectors.",
     quantity: 5,
     minimumStock: 25,
     expiryDate: "2026-12-31",
@@ -494,6 +501,7 @@ export const mockMedicines = [
     id: "M2008",
     name: "Iron Supplements",
     category: "Vitamin / Mineral",
+    description: "Used to treat or prevent low blood levels of iron and manage iron-deficiency anemia.",
     quantity: 200,
     minimumStock: 50,
     expiryDate: "2028-08-31",
@@ -503,6 +511,7 @@ export const mockMedicines = [
     id: "M2009",
     name: "Rifampicin",
     category: "Anti-tuberculosis",
+    description: "Antibiotic used with other medications to treat tuberculosis (TB) and serious bacterial infections.",
     quantity: 80,
     minimumStock: 40,
     expiryDate: "2027-03-20",
@@ -512,6 +521,7 @@ export const mockMedicines = [
     id: "M2010",
     name: "Paracetamol",
     category: "Analgesic / Antipyretic",
+    description: "Used to reduce fever and relieve mild to moderate pain like headaches, body aches, and fever.",
     quantity: 12,
     minimumStock: 100,
     expiryDate: "2027-10-10",
@@ -520,74 +530,117 @@ export const mockMedicines = [
 ];
 
 export const mockAlerts = [
+  // Disease Alerts
   {
     id: "A3001",
+    title: "Seasonal Malaria Outbreak Warning",
+    description: "Disease Outbreak: 18 confirmed and suspected Malaria cases reported across Anand rural cluster in past 48 hours.",
+    message: "Disease Outbreak: 18 confirmed and suspected Malaria cases reported across Anand rural cluster in past 48 hours.",
     type: "Critical",
-    message: "Patient Anil Singh (P1003) is marked Critical with Chronic Asthma.",
+    severity: "Critical",
+    category: "disease",
     date: "2026-08-14 10:30",
     role: "doctor"
   },
   {
     id: "A3002",
+    title: "High Disease Trend - Viral Respiratory Infections",
+    description: "Disease Trend: Acute respiratory infections and asthma exacerbations increased by 34% in Purulia district.",
+    message: "Disease Trend: Acute respiratory infections and asthma exacerbations increased by 34% in Purulia district.",
     type: "Warning",
-    message: "Patient Ramesh Kumar (P1001) requires hypertension follow-up.",
+    severity: "Warning",
+    category: "disease",
     date: "2026-08-14 09:15",
     role: "doctor"
   },
   {
     id: "A3003",
-    type: "Medicine",
-    message: "Amoxicillin is completely out of stock (0 available).",
+    title: "Critical Patient Condition - Anil Singh",
+    description: "Patient Anil Singh (P1003) is marked Critical with Chronic Asthma and acute Bronchospasm.",
+    message: "Patient Anil Singh (P1003) is marked Critical with Chronic Asthma and acute Bronchospasm.",
+    type: "Critical",
+    severity: "Critical",
+    category: "disease",
+    date: "2026-08-14 09:45",
+    role: "hospitalStaff"
+  },
+  {
+    id: "A3004",
+    title: "Hypertension & Cardiac Follow-up Required",
+    description: "Patient Ramesh Kumar (P1001) is overdue for monthly Stage 2 Hypertension assessment.",
+    message: "Patient Ramesh Kumar (P1001) is overdue for monthly Stage 2 Hypertension assessment.",
+    type: "Warning",
+    severity: "Warning",
+    category: "disease",
+    date: "2026-08-14 08:30",
+    role: "doctor"
+  },
+  {
+    id: "A3005",
+    title: "Tuberculosis DOTS Surveillance Update",
+    description: "Patient Sanjay Oraon (P1009) successfully completed intensive phase DOTS therapy with stable vitals.",
+    message: "Patient Sanjay Oraon (P1009) successfully completed intensive phase DOTS therapy with stable vitals.",
+    type: "Info",
+    severity: "Info",
+    category: "disease",
+    date: "2026-08-13 14:20",
+    role: "hospitalStaff"
+  },
+
+  // Medicine Alerts
+  {
+    id: "A3006",
+    title: "Amoxicillin Out of Stock",
+    description: "Medicine Alert: Amoxicillin 500mg is completely OUT OF STOCK (0 units available). Immediate reorder required.",
+    message: "Medicine Alert: Amoxicillin 500mg is completely OUT OF STOCK (0 units available). Immediate reorder required.",
+    type: "Critical",
+    severity: "Critical",
+    category: "medicine",
     date: "2026-08-14 08:00",
     role: "pharmacist"
   },
   {
-    id: "A3004",
-    type: "Medicine",
-    message: "Chloroquine stock is critically low (5 remaining).",
+    id: "A3007",
+    title: "Chloroquine Low Stock Alert",
+    description: "Medicine Alert: Chloroquine 250mg is critically low (5 units remaining, minimum threshold: 25 units).",
+    message: "Medicine Alert: Chloroquine 250mg is critically low (5 units remaining, minimum threshold: 25 units).",
+    type: "Critical",
+    severity: "Critical",
+    category: "medicine",
+    date: "2026-08-14 08:15",
+    role: "pharmacist"
+  },
+  {
+    id: "A3008",
+    title: "Salbutamol Inhaler Stock Warning",
+    description: "Medicine Alert: Salbutamol Inhaler stock has dropped below minimum threshold (8 remaining, minimum: 10).",
+    message: "Medicine Alert: Salbutamol Inhaler stock has dropped below minimum threshold (8 remaining, minimum: 10).",
+    type: "Warning",
+    severity: "Warning",
+    category: "medicine",
     date: "2026-08-14 08:30",
     role: "pharmacist"
   },
   {
-    id: "A3005",
-    type: "Medicine",
-    message: "Paracetamol stock is low (12 remaining, minimum 100).",
+    id: "A3009",
+    title: "Paracetamol Buffer Stock Low",
+    description: "Medicine Alert: Paracetamol 650mg buffer stock is low (12 units remaining, minimum required: 100 units).",
+    message: "Medicine Alert: Paracetamol 650mg buffer stock is low (12 units remaining, minimum required: 100 units).",
+    type: "Warning",
+    severity: "Warning",
+    category: "medicine",
     date: "2026-08-14 08:45",
     role: "pharmacist"
   },
   {
-    id: "A3006",
-    type: "Info",
-    message: "New patient Hariharan S. (P1007) added by John Doe (Staff).",
-    date: "2026-08-13 14:20",
-    role: "hospitalStaff"
-  },
-  {
-    id: "A3007",
-    type: "Info",
-    message: "Patient record Kiran Devi (P1006) updated by Dr. Sarah Paul.",
-    date: "2026-08-13 11:10",
-    role: "hospitalStaff"
-  },
-  {
-    id: "A3008",
-    type: "Critical",
-    message: "Critical condition flag raised for Anil Singh (P1003).",
-    date: "2026-08-14 10:32",
-    role: "hospitalStaff"
-  },
-  {
-    id: "A3009",
-    type: "Warning",
-    message: "Medicine Salbutamol Inhaler is low in stock (8 remaining).",
-    date: "2026-08-14 08:50",
-    role: "pharmacist"
-  },
-  {
     id: "A3010",
-    type: "Info",
-    message: "Pharmacist updated stock levels for Metformin.",
-    date: "2026-08-14 12:15",
-    role: "hospitalStaff"
+    title: "Medicine Expiry Notice - Batch #AMX-2026",
+    description: "Medicine Alert: Amoxicillin Batch #AMX-2026 reaches expiration date on 2026-11-15. Review stock rotation.",
+    message: "Medicine Alert: Amoxicillin Batch #AMX-2026 reaches expiration date on 2026-11-15. Review stock rotation.",
+    type: "Warning",
+    severity: "Warning",
+    category: "medicine",
+    date: "2026-08-13 11:10",
+    role: "pharmacist"
   }
 ];

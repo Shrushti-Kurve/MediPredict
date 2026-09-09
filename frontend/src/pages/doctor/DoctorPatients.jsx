@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
-
-import { getPatients, updatePatient } from '../../services/api/patientService';
-import {
-  getMedicines
-} from '../../services/api/medicineService';
-import { prescribeMultiple } from '../../services/api/prescriptionService';
+import { 
+  getPatients, 
+  prescribeMedicines, 
+  getMedicines 
+} from '../../services/localStorageService';
 import {
   FaSearch,
   FaEye,
@@ -17,9 +16,12 @@ import {
   FaPrescriptionBottleAlt,
   FaUserMd,
   FaFilePrescription,
-  FaPrint
+  FaPrint,
+  FaMapMarkerAlt,
+  FaPhoneAlt,
+  FaEnvelope,
+  FaCalendarAlt
 } from 'react-icons/fa';
-
 import './DoctorPatients.css';
 
 const FREQUENCY_OPTIONS = [
@@ -47,19 +49,13 @@ const DURATION_OPTIONS = [
 ];
 
 const DoctorPatients = () => {
-
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const [patients, setPatients] = useState([]);
   const [pharmacyStock, setPharmacyStock] = useState([]);
-
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
   const [searchQuery, setSearchQuery] = useState('');
 
   const [selectedPatient, setSelectedPatient] = useState(null);
-
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
 
@@ -67,39 +63,23 @@ const DoctorPatients = () => {
     id: '',
     disease: '',
     symptoms: '',
-    status: 'Active',
     clinicalNotes: ''
   });
 
   const [prescribedMeds, setPrescribedMeds] = useState([]);
 
   // =====================================================
-  // LOAD PATIENTS + MEDICINES
+  // LOAD PATIENTS + MEDICINES (Synchronized data source)
   // =====================================================
-
-  const loadData = async () => {
+  const loadData = () => {
     try {
       setLoading(true);
-      setError('');
-
-      const [patientsData, medicinesData] = await Promise.all([
-        getPatients(),
-        getMedicines()
-      ]);
-
-      setPatients(Array.isArray(patientsData) ? patientsData : []);
-      setPharmacyStock(Array.isArray(medicinesData) ? medicinesData : []);
-
+      const patientsData = getPatients() || [];
+      const medicinesData = getMedicines() || [];
+      setPatients(patientsData);
+      setPharmacyStock(medicinesData);
     } catch (err) {
-
       console.error('LOAD DATA ERROR:', err);
-
-      setError(
-        err?.response?.data?.detail ||
-        err?.message ||
-        'Unable to load patients and medicines'
-      );
-
     } finally {
       setLoading(false);
     }
@@ -112,28 +92,27 @@ const DoctorPatients = () => {
   // =====================================================
   // SEARCH
   // =====================================================
-
   const filteredPatients = patients.filter(patient => {
-
-    const name = String(patient.Patient_Name || '').toLowerCase();
-    const id = String(patient.Patient_ID || '').toLowerCase();
-    const village = String(patient.Village || '').toLowerCase();
-    const disease = String(patient.Disease || '').toLowerCase();
-
-    const query = searchQuery.toLowerCase();
+    const name = String(patient.name || '').toLowerCase();
+    const id = String(patient.id || '').toLowerCase();
+    const address = String(patient.address || '').toLowerCase();
+    const disease = String(patient.disease || '').toLowerCase();
+    const phone = String(patient.phone || '');
+    const query = searchQuery.toLowerCase().trim();
 
     return (
+      !query ||
       name.includes(query) ||
       id.includes(query) ||
-      village.includes(query) ||
-      disease.includes(query)
+      address.includes(query) ||
+      disease.includes(query) ||
+      phone.includes(query)
     );
   });
 
   // =====================================================
   // VIEW PATIENT
   // =====================================================
-
   const handleOpenViewModal = (patient) => {
     setSelectedPatient(patient);
     setViewModalOpen(true);
@@ -142,31 +121,43 @@ const DoctorPatients = () => {
   // =====================================================
   // OPEN PRESCRIPTION
   // =====================================================
-
   const handleOpenEditModal = (patient) => {
-
     setSelectedPatient(patient);
 
     setEditForm({
-      id: patient.Patient_ID,
-      disease: patient.Disease || '',
-      symptoms: patient.Symptoms || '',
-      status: patient.Status || 'Active',
-      clinicalNotes: ''
+      id: patient.id,
+      disease: patient.disease || '',
+      symptoms: patient.symptoms || '',
+      clinicalNotes: patient.clinicalNotes || ''
     });
 
-    setPrescribedMeds([
-      {
-        id: `MED-${Date.now()}`,
-        medicineId: '',
-        name: '',
-        dosage: '',
-        frequency: '',
-        duration: '',
-        quantity: 1,
-        instructions: ''
-      }
-    ]);
+    if (patient.medicines && patient.medicines.length > 0) {
+      setPrescribedMeds(
+        patient.medicines.map((m, idx) => ({
+          id: m.id || `MED-${Date.now()}-${idx}`,
+          medicineId: m.medicineId || m.id || '',
+          name: m.name || '',
+          dosage: m.dosage || '',
+          frequency: m.frequency || '',
+          duration: m.duration || '',
+          quantity: m.quantity || 1,
+          instructions: m.instructions || ''
+        }))
+      );
+    } else {
+      setPrescribedMeds([
+        {
+          id: `MED-${Date.now()}`,
+          medicineId: '',
+          name: '',
+          dosage: '',
+          frequency: '',
+          duration: '',
+          quantity: 1,
+          instructions: ''
+        }
+      ]);
+    }
 
     setEditModalOpen(true);
   };
@@ -174,9 +165,7 @@ const DoctorPatients = () => {
   // =====================================================
   // ADD MEDICINE ROW
   // =====================================================
-
   const handleAddMedicineRow = () => {
-
     setPrescribedMeds(prev => [
       ...prev,
       {
@@ -195,11 +184,8 @@ const DoctorPatients = () => {
   // =====================================================
   // REMOVE MEDICINE ROW
   // =====================================================
-
   const handleRemoveMedicineRow = (index) => {
-
     if (prescribedMeds.length === 1) {
-
       setPrescribedMeds([
         {
           id: `MED-${Date.now()}`,
@@ -212,30 +198,22 @@ const DoctorPatients = () => {
           instructions: ''
         }
       ]);
-
       return;
     }
 
-    setPrescribedMeds(prev =>
-      prev.filter((_, i) => i !== index)
-    );
+    setPrescribedMeds(prev => prev.filter((_, i) => i !== index));
   };
 
   // =====================================================
   // MEDICINE FIELD CHANGE
   // =====================================================
-
   const handleMedFieldChange = (index, field, value) => {
-
     setPrescribedMeds(prev => {
-
       const updated = [...prev];
-
       updated[index] = {
         ...updated[index],
         [field]: value
       };
-
       return updated;
     });
   };
@@ -243,492 +221,335 @@ const DoctorPatients = () => {
   // =====================================================
   // MEDICINE SELECTION
   // =====================================================
-
-  const handleMedicineSelect = (index, medicineId) => {
-
-    const medicine = pharmacyStock.find(
-      m => String(m.Medicine_ID) === String(medicineId)
+  const handleMedicineSelect = (index, medIdentifier) => {
+    const medObj = pharmacyStock.find(
+      m => String(m.id) === String(medIdentifier) || m.name === medIdentifier
     );
 
     setPrescribedMeds(prev => {
-
       const updated = [...prev];
-
       updated[index] = {
         ...updated[index],
-        medicineId: medicineId,
-        name: medicine?.Medicine_Name || ''
+        medicineId: medObj ? medObj.id : medIdentifier,
+        name: medObj ? medObj.name : medIdentifier
       };
-
       return updated;
     });
   };
 
   // =====================================================
-  // DIAGNOSIS UPDATE
-  // =====================================================
-
-  const handleDiagnosis = async () => {
-
-    if (!selectedPatient) return;
-
-    try {
-
-      await updatePatient(
-        selectedPatient.Patient_ID,
-        {
-          Disease: editForm.disease,
-          Symptoms: editForm.symptoms
-        }
-      );
-
-      alert('Patient diagnosis updated successfully.');
-
-      await loadData();
-
-    } catch (err) {
-
-      console.error(err);
-
-      alert(
-        err?.response?.data?.detail ||
-        'Failed to update diagnosis'
-      );
-    }
-  };
-
-  // =====================================================
   // PRESCRIPTION SUBMIT
   // =====================================================
-
-  const handlePrescriptionSubmit = async (e) => {
-
+  const handlePrescriptionSubmit = (e) => {
     e.preventDefault();
 
     if (!editForm.disease.trim()) {
-
-      alert('Please enter the diagnosed disease.');
-
+      alert('Please enter the clinical diagnosis.');
       return;
     }
 
     const validMeds = prescribedMeds.filter(
-      med => med.medicineId && Number(med.quantity) > 0
+      med => (med.name || med.medicineId) && Number(med.quantity) > 0
     );
 
     if (validMeds.length === 0) {
-
-      alert('Please select at least one medicine.');
-
+      alert('Please select or specify at least one medicine.');
       return;
     }
 
     try {
+      prescribeMedicines(selectedPatient.id, {
+        disease: editForm.disease,
+        symptoms: editForm.symptoms,
+        notes: editForm.clinicalNotes,
+        medicines: validMeds
+      });
 
-      // -------------------------------------------------
-      // FIRST UPDATE DIAGNOSIS
-      // -------------------------------------------------
-
-      await updatePatient(
-        editForm.id,
-        {
-          Disease: editForm.disease,
-          Symptoms: editForm.symptoms
-        }
-      );
-
-      // -------------------------------------------------
-      // PRESCRIBE EACH MEDICINE (via prescriptionService)
-      // -------------------------------------------------
-
-      const medsPayload = validMeds.map(m => ({ medicine_id: Number(m.medicineId), quantity: Number(m.quantity) }));
-
-      // call sequentially for each medicine (backend supports single-item POST)
-      for (const item of medsPayload) {
-        await prescribeMultiple({ patient_id: Number(editForm.id), medicines: [item], user_id: null });
-      }
-
-      alert(
-        `Prescription saved successfully for ${selectedPatient.Patient_Name}.`
-      );
-
+      alert(`Prescription and diagnosis saved successfully for ${selectedPatient.name}.`);
       setEditModalOpen(false);
       setSelectedPatient(null);
-
-      await loadData();
-
+      loadData();
     } catch (err) {
-
       console.error('PRESCRIPTION ERROR:', err);
-
-      alert(
-        err?.response?.data?.detail?.message ||
-        err?.response?.data?.detail ||
-        err?.message ||
-        'Failed to save prescription'
-      );
+      alert(err.message || 'Failed to save prescription');
     }
   };
-
-  // =====================================================
-  // STATUS BADGE
-  // =====================================================
-
-  const getStatusBadgeClass = (status) => {
-
-    switch (status) {
-
-      case 'Critical':
-        return 'badge badge-danger';
-
-      case 'Active':
-        return 'badge badge-warning';
-
-      case 'Under Observation':
-        return 'badge badge-info';
-
-      case 'Recovered':
-        return 'badge badge-success';
-
-      default:
-        return 'badge badge-primary';
-    }
-  };
-
-  // =====================================================
-  // UI
-  // =====================================================
 
   return (
-
     <div className="dashboard-layout">
-
-      <Sidebar
-        isOpen={sidebarOpen}
-        toggleSidebar={setSidebarOpen}
-      />
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={setSidebarOpen} />
 
       <div className="dashboard-main">
-
         <DashboardHeader
           title="Doctor Consultation & Prescriptions"
           toggleSidebar={setSidebarOpen}
         />
 
         <main className="dashboard-content">
-
           {/* SEARCH */}
-
           <div className="doctor-patients-controls">
-
             <div className="search-bar-wrapper">
-
               <FaSearch className="search-icon" />
-
               <input
                 type="text"
-                placeholder="Search patient by ID, name, diagnosis or village..."
+                placeholder="Search patient by ID, name, diagnosis, phone, or village..."
                 className="form-control search-input"
                 value={searchQuery}
-                onChange={(e) =>
-                  setSearchQuery(e.target.value)
-                }
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-
             </div>
-
           </div>
 
           {/* LOADING */}
-
           {loading && (
             <div className="empty-state-container">
               <p>Loading patients...</p>
             </div>
           )}
 
-          {/* ERROR */}
-
-          {!loading && error && (
-            <div className="empty-state-container">
-              <p>{error}</p>
-
-              <button
-                className="btn btn-primary"
-                onClick={loadData}
-              >
-                Retry
-              </button>
-            </div>
-          )}
-
           {/* PATIENT TABLE */}
-
-          {!loading && !error && (
-
+          {!loading && (
             <div className="table-responsive">
-
               {filteredPatients.length > 0 ? (
-
                 <table className="table">
-
                   <thead>
-
                     <tr>
                       <th>Patient ID</th>
                       <th>Name</th>
                       <th>Age / Gender</th>
-                      <th>Village</th>
-                      <th>Diagnosis</th>
+                      <th>Village / Address</th>
+                      <th>Diagnosis / Reason</th>
                       <th>Last Visit</th>
-                      <th>Action</th>
+                      <th className="text-center">Actions</th>
                     </tr>
-
                   </thead>
-
                   <tbody>
-
-                    {filteredPatients.map(patient => (
-
-                      <tr key={patient.Patient_ID}>
-
-                        <td className="font-weight-600">
-                          {patient.Patient_ID}
-                        </td>
-
-                        <td className="font-weight-600">
-                          {patient.Patient_Name}
-                        </td>
-
-                        <td>
-                          {patient.Age || '-'} yrs /
-                          {' '}
-                          {patient.Gender || '-'}
-                        </td>
-
-                        <td>
-                          {patient.Village || '-'}
-                        </td>
-
-                        <td>
-                          <span className="disease-highlight">
-                            {patient.Disease || 'Not Diagnosed'}
-                          </span>
-                        </td>
-
-                        <td>
-                          {patient.Visit_Date || '-'}
-                        </td>
-
-                        <td>
-
-                          <div className="table-action-btns">
-
-                            <button
-                              className="btn-action btn-view"
-                              onClick={() =>
-                                handleOpenViewModal(patient)
-                              }
-                            >
-                              <FaEye /> View
-                            </button>
-
-                            <button
-                              className="btn-action btn-edit"
-                              onClick={() =>
-                                handleOpenEditModal(patient)
-                              }
-                            >
-                              <FaFilePrescription /> Prescribe
-                            </button>
-
-                          </div>
-
-                        </td>
-
-                      </tr>
-
-                    ))}
-
+                    {filteredPatients.map(patient => {
+                      return (
+                        <tr key={patient.id}>
+                          <td className="font-weight-600">{patient.id}</td>
+                          <td className="font-weight-600">
+                            {patient.name}
+                            {patient.bloodGroup && (
+                              <span className="badge badge-info" style={{ marginLeft: '6px', fontSize: '0.7rem' }}>
+                                {patient.bloodGroup}
+                              </span>
+                            )}
+                          </td>
+                          <td>{patient.age || '-'} yrs / {patient.gender || '-'}</td>
+                          <td className="text-secondary font-size-sm">
+                            <FaMapMarkerAlt style={{ color: '#0f766e', marginRight: '4px' }} />
+                            {patient.address || 'Rural PHC Sector'}
+                          </td>
+                          <td>
+                            <span className="disease-highlight">
+                              {patient.disease || 'General Checkup'}
+                            </span>
+                          </td>
+                          <td>{patient.lastVisit || '-'}</td>
+                          <td>
+                            <div className="table-action-btns">
+                              <button
+                                className="btn-action btn-view"
+                                onClick={() => handleOpenViewModal(patient)}
+                                title="View Patient Details"
+                              >
+                                <FaEye /> View
+                              </button>
+                              <button
+                                className="btn-action btn-edit"
+                                onClick={() => handleOpenEditModal(patient)}
+                                title="Prescribe Medications"
+                              >
+                                <FaFilePrescription /> Prescribe
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
-
                 </table>
-
               ) : (
-
                 <div className="empty-state-container">
                   <p>No matching patient records found.</p>
                 </div>
-
               )}
-
             </div>
-
           )}
 
           {/* =================================================
-              VIEW MODAL
+              VIEW MODAL (Complete matching patient information)
           ================================================= */}
-
           {viewModalOpen && selectedPatient && (
-
             <div className="modal-overlay">
-
-              <div className="modal-content doc-rx-modal">
-
+              <div className="modal-content doc-rx-modal" style={{ maxWidth: '750px' }}>
                 <div className="modal-header">
-
                   <div>
-
-                    <h3>
-                      Patient Clinical Summary
-                    </h3>
-
+                    <h3>Patient Clinical Profile: {selectedPatient.name}</h3>
                     <span className="text-muted">
-                      Patient ID: {selectedPatient.Patient_ID}
+                      Patient ID: {selectedPatient.id} • Registered by Hospital Intake
                     </span>
-
                   </div>
-
                   <button
                     className="modal-close-btn"
                     onClick={() => setViewModalOpen(false)}
                   >
                     <FaTimes />
                   </button>
-
                 </div>
 
                 <div className="modal-body">
-
                   <div className="rx-slip-card">
-
                     <div className="rx-slip-header">
-
                       <div className="rx-doctor-info">
-
                         <h4>
-                          <FaUserMd />
-                          {' '}
-                          {selectedPatient.Doctor || 'Doctor'}
+                          <FaUserMd /> {selectedPatient.doctor || 'Dr. Sarah Paul'}
                         </h4>
-
+                        <small className="text-muted">Physician in Charge</small>
                       </div>
-
-                      <div className="rx-symbol">
-                        ℞
-                      </div>
-
+                      <div className="rx-symbol">℞</div>
                     </div>
 
-                    <div className="rx-patient-meta-grid">
-
-                      <div>
-                        <strong>Patient:</strong>{' '}
-                        {selectedPatient.Patient_Name}
+                    <div className="patient-details-grid" style={{ marginBottom: '1.25rem' }}>
+                      <div className="detail-field">
+                        <span className="detail-label">Full Name</span>
+                        <span className="detail-val">{selectedPatient.name}</span>
                       </div>
-
-                      <div>
-                        <strong>Age:</strong>{' '}
-                        {selectedPatient.Age || '-'}
+                      <div className="detail-field">
+                        <span className="detail-label">Age & DOB</span>
+                        <span className="detail-val">{selectedPatient.dob || 'N/A'} ({selectedPatient.age || '-'} yrs)</span>
                       </div>
-
-                      <div>
-                        <strong>Gender:</strong>{' '}
-                        {selectedPatient.Gender || '-'}
+                      <div className="detail-field">
+                        <span className="detail-label">Gender & Blood Group</span>
+                        <span className="detail-val">{selectedPatient.gender || '-'} • Blood Group: {selectedPatient.bloodGroup || 'N/A'}</span>
                       </div>
-
-                      <div>
-                        <strong>Village:</strong>{' '}
-                        {selectedPatient.Village || '-'}
+                      <div className="detail-field">
+                        <span className="detail-label">Phone Number</span>
+                        <span className="detail-val">{selectedPatient.phone || '-'}</span>
                       </div>
-
-                      <div>
-                        <strong>Diagnosis:</strong>{' '}
-                        <span className="text-primary">
-                          {selectedPatient.Disease || 'Not diagnosed'}
+                      <div className="detail-field">
+                        <span className="detail-label">Email Address</span>
+                        <span className="detail-val">{selectedPatient.email || 'N/A'}</span>
+                      </div>
+                      <div className="detail-field">
+                        <span className="detail-label">Village / Address</span>
+                        <span className="detail-val">{selectedPatient.address || '-'}</span>
+                      </div>
+                      <div className="detail-field">
+                        <span className="detail-label">Emergency Contact</span>
+                        <span className="detail-val">{selectedPatient.emergencyContact || '-'}</span>
+                      </div>
+                      <div className="detail-field">
+                        <span className="detail-label">Diagnosis / Condition</span>
+                        <span className="detail-val" style={{ color: '#0f766e', fontWeight: 700 }}>
+                          {selectedPatient.disease || 'General Checkup'}
                         </span>
                       </div>
-
-                      <div>
-                        <strong>Symptoms:</strong>{' '}
-                        {selectedPatient.Symptoms || '-'}
+                      <div className="detail-field">
+                        <span className="detail-label">Last Visit Date</span>
+                        <span className="detail-val">{selectedPatient.lastVisit || 'N/A'}</span>
                       </div>
-
+                      <div className="detail-field">
+                        <span className="detail-label">Next Scheduled Visit</span>
+                        <span className="detail-val">{selectedPatient.nextVisit || 'None Scheduled'}</span>
+                      </div>
                     </div>
 
+                    {/* Prescriptions List */}
+                    <div style={{ marginTop: '1rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem', fontWeight: 700, color: '#0f766e' }}>
+                        <FaPills /> <span>Prescribed Medications</span>
+                      </div>
+                      {selectedPatient.medicines && selectedPatient.medicines.length > 0 ? (
+                        <div className="table-responsive" style={{ background: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <table className="table" style={{ margin: 0, fontSize: '0.88rem' }}>
+                            <thead>
+                              <tr>
+                                <th>Medicine</th>
+                                <th>Dosage</th>
+                                <th>Frequency</th>
+                                <th>Duration</th>
+                                <th>Qty</th>
+                                <th>Instructions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {selectedPatient.medicines.map((med, idx) => (
+                                <tr key={idx}>
+                                  <td className="font-weight-600">{med.name}</td>
+                                  <td>{med.dosage || 'Standard'}</td>
+                                  <td>{med.frequency || 'As directed'}</td>
+                                  <td>{med.duration || 'Course'}</td>
+                                  <td>{med.quantity}</td>
+                                  <td className="text-secondary">{med.instructions || 'Take as prescribed'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
+                          No medications prescribed yet.
+                        </p>
+                      )}
+                    </div>
                   </div>
-
                 </div>
 
                 <div className="modal-footer">
-
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setViewModalOpen(false);
+                      handleOpenEditModal(selectedPatient);
+                    }}
+                    style={{ marginRight: 'auto' }}
+                  >
+                    <FaFilePrescription /> Prescribe / Edit Diagnosis
+                  </button>
                   <button
                     className="btn btn-outline-primary"
                     onClick={() => window.print()}
                   >
-                    <FaPrint /> Print
+                    <FaPrint /> Print Summary
                   </button>
-
                   <button
                     className="btn btn-secondary"
-                    onClick={() =>
-                      setViewModalOpen(false)
-                    }
+                    onClick={() => setViewModalOpen(false)}
                   >
                     Close
                   </button>
-
                 </div>
-
               </div>
-
             </div>
-
           )}
 
           {/* =================================================
               PRESCRIPTION MODAL
           ================================================= */}
-
           {editModalOpen && selectedPatient && (
-
             <div className="modal-overlay">
-
               <div
                 className="modal-content doc-prescribe-modal"
                 style={{ maxWidth: '850px' }}
               >
-
                 <div className="modal-header">
-
                   <div>
-
-                    <h3>
-                      Prescribe Medications
-                    </h3>
-
+                    <h3>Prescribe Medications & Diagnosis</h3>
                     <span className="text-muted">
-                      {selectedPatient.Patient_Name}
-                      {' • '}
-                      ID: {selectedPatient.Patient_ID}
+                      {selectedPatient.name} • ID: {selectedPatient.id}
                     </span>
-
                   </div>
-
                   <button
                     className="modal-close-btn"
-                    onClick={() =>
-                      setEditModalOpen(false)
-                    }
+                    onClick={() => setEditModalOpen(false)}
                   >
                     <FaTimes />
                   </button>
-
                 </div>
 
                 <form onSubmit={handlePrescriptionSubmit}>
-
                   <div
                     className="modal-body"
                     style={{
@@ -736,24 +557,15 @@ const DoctorPatients = () => {
                       overflowY: 'auto'
                     }}
                   >
-
                     {/* DIAGNOSIS */}
-
                     <div className="form-row">
-
-                      <div
-                        className="form-group"
-                        style={{ flex: 1 }}
-                      >
-
-                        <label>
-                          Clinical Diagnosis *
-                        </label>
-
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label htmlFor="doc-disease">Clinical Diagnosis *</label>
                         <input
                           type="text"
+                          id="doc-disease"
                           className="form-control"
-                          placeholder="e.g. Dengue"
+                          placeholder="e.g. Type 2 Diabetes / Malaria"
                           value={editForm.disease}
                           onChange={(e) =>
                             setEditForm(prev => ({
@@ -763,22 +575,14 @@ const DoctorPatients = () => {
                           }
                           required
                         />
-
                       </div>
-
-                      <div
-                        className="form-group"
-                        style={{ flex: 1 }}
-                      >
-
-                        <label>
-                          Symptoms
-                        </label>
-
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label htmlFor="doc-symptoms">Symptoms / Observed Vitals</label>
                         <input
                           type="text"
+                          id="doc-symptoms"
                           className="form-control"
-                          placeholder="e.g. Fever, headache"
+                          placeholder="e.g. Fever, body ache, elevated BP"
                           value={editForm.symptoms}
                           onChange={(e) =>
                             setEditForm(prev => ({
@@ -787,31 +591,17 @@ const DoctorPatients = () => {
                             }))
                           }
                         />
-
                       </div>
-
                     </div>
 
                     {/* MEDICINES */}
-
                     <div className="rx-builder-section">
-
                       <div className="rx-builder-header">
-
                         <div>
-
                           <h4 className="rx-builder-title">
-
-                            <FaPrescriptionBottleAlt />
-
-                            {' '}
-                            Prescription
-                            ({prescribedMeds.length})
-
+                            <FaPrescriptionBottleAlt /> Prescribed Medicines ({prescribedMeds.length})
                           </h4>
-
                         </div>
-
                         <button
                           type="button"
                           className="btn btn-outline-primary btn-sm"
@@ -819,234 +609,118 @@ const DoctorPatients = () => {
                         >
                           <FaPlus /> Add Medicine
                         </button>
-
                       </div>
 
                       {/* MEDICINE ROWS */}
-
                       <div className="rx-med-cards-container">
-
                         {prescribedMeds.map((med, index) => (
-
-                          <div
-                            key={med.id}
-                            className="rx-med-card"
-                          >
-
+                          <div key={med.id} className="rx-med-card">
                             <div className="rx-med-card-header">
-
-                              <span className="rx-med-number">
-                                Medicine #{index + 1}
-                              </span>
-
+                              <span className="rx-med-number">Medicine #{index + 1}</span>
                               <button
                                 type="button"
                                 className="btn-delete-med"
-                                onClick={() =>
-                                  handleRemoveMedicineRow(index)
-                                }
+                                onClick={() => handleRemoveMedicineRow(index)}
                               >
                                 <FaTrash /> Remove
                               </button>
-
                             </div>
 
                             <div className="rx-med-card-grid">
-
-                              {/* MEDICINE */}
-
-                              <div
-                                className="form-group med-name-field"
-                              >
-
-                                <label>
-                                  Medicine *
-                                </label>
-
+                              {/* MEDICINE SELECT */}
+                              <div className="form-group med-name-field">
+                                <label>Medicine Name *</label>
                                 <select
                                   className="form-control"
-                                  value={med.medicineId}
-                                  onChange={(e) =>
-                                    handleMedicineSelect(
-                                      index,
-                                      e.target.value
-                                    )
-                                  }
+                                  value={med.medicineId || med.name}
+                                  onChange={(e) => handleMedicineSelect(index, e.target.value)}
                                   required
                                 >
-
-                                  <option value="">
-                                    Select medicine
-                                  </option>
-
+                                  <option value="">-- Choose Medicine from Stock --</option>
                                   {pharmacyStock.map(medicine => (
-
-                                    <option
-                                      key={medicine.Medicine_ID}
-                                      value={medicine.Medicine_ID}
-                                    >
-                                      {medicine.Medicine_Name}
-                                      {' '}
-                                      —
-                                      {' '}
-                                      Stock:
-                                      {' '}
-                                      {medicine.Current_Stock}
+                                    <option key={medicine.id} value={medicine.id}>
+                                      {medicine.name} ({medicine.category}) — Stock: {medicine.quantity}
                                     </option>
-
                                   ))}
-
                                 </select>
-
                               </div>
 
                               {/* DOSAGE */}
-
                               <div className="form-group">
-
-                                <label>
-                                  Dosage
-                                </label>
-
+                                <label>Dosage</label>
                                 <input
                                   type="text"
                                   className="form-control"
-                                  placeholder="500mg"
+                                  placeholder="e.g. 500mg"
                                   value={med.dosage}
-                                  onChange={(e) =>
-                                    handleMedFieldChange(
-                                      index,
-                                      'dosage',
-                                      e.target.value
-                                    )
-                                  }
+                                  onChange={(e) => handleMedFieldChange(index, 'dosage', e.target.value)}
                                 />
-
                               </div>
 
                               {/* FREQUENCY */}
-
                               <div className="form-group">
-
-                                <label>
-                                  Frequency
-                                </label>
-
+                                <label>Frequency</label>
                                 <input
                                   type="text"
                                   list="frequencyOptionsList"
                                   className="form-control"
-                                  placeholder="1-0-1"
+                                  placeholder="e.g. 1-0-1"
                                   value={med.frequency}
-                                  onChange={(e) =>
-                                    handleMedFieldChange(
-                                      index,
-                                      'frequency',
-                                      e.target.value
-                                    )
-                                  }
+                                  onChange={(e) => handleMedFieldChange(index, 'frequency', e.target.value)}
                                 />
-
                               </div>
 
                               {/* DURATION */}
-
                               <div className="form-group">
-
-                                <label>
-                                  Duration
-                                </label>
-
+                                <label>Duration</label>
                                 <input
                                   type="text"
                                   list="durationOptionsList"
                                   className="form-control"
-                                  placeholder="5 days"
+                                  placeholder="e.g. 5 days"
                                   value={med.duration}
-                                  onChange={(e) =>
-                                    handleMedFieldChange(
-                                      index,
-                                      'duration',
-                                      e.target.value
-                                    )
-                                  }
+                                  onChange={(e) => handleMedFieldChange(index, 'duration', e.target.value)}
                                 />
-
                               </div>
 
                               {/* QUANTITY */}
-
                               <div className="form-group">
-
-                                <label>
-                                  Quantity *
-                                </label>
-
+                                <label>Quantity *</label>
                                 <input
                                   type="number"
                                   min="1"
                                   className="form-control"
                                   value={med.quantity}
-                                  onChange={(e) =>
-                                    handleMedFieldChange(
-                                      index,
-                                      'quantity',
-                                      e.target.value
-                                    )
-                                  }
+                                  onChange={(e) => handleMedFieldChange(index, 'quantity', parseInt(e.target.value) || 1)}
                                   required
                                 />
-
                               </div>
 
                               {/* INSTRUCTIONS */}
-
                               <div className="form-group">
-
-                                <label>
-                                  Instructions
-                                </label>
-
+                                <label>Instructions</label>
                                 <input
                                   type="text"
                                   className="form-control"
-                                  placeholder="After meals"
+                                  placeholder="e.g. Take after meal"
                                   value={med.instructions}
-                                  onChange={(e) =>
-                                    handleMedFieldChange(
-                                      index,
-                                      'instructions',
-                                      e.target.value
-                                    )
-                                  }
+                                  onChange={(e) => handleMedFieldChange(index, 'instructions', e.target.value)}
                                 />
-
                               </div>
-
                             </div>
-
                           </div>
-
                         ))}
-
                       </div>
-
                     </div>
 
-                    {/* NOTES */}
-
-                    <div
-                      className="form-group"
-                      style={{ marginTop: '1.25rem' }}
-                    >
-
-                      <label>
-                        Clinical Notes
-                      </label>
-
+                    {/* CLINICAL NOTES */}
+                    <div className="form-group" style={{ marginTop: '1.25rem' }}>
+                      <label htmlFor="doc-notes">Clinical Notes & Follow-up Instructions</label>
                       <textarea
+                        id="doc-notes"
                         className="form-control"
                         rows="3"
+                        placeholder="e.g. Review blood glucose in 14 days. Avoid high sugar diet."
                         value={editForm.clinicalNotes}
                         onChange={(e) =>
                           setEditForm(prev => ({
@@ -1055,64 +729,40 @@ const DoctorPatients = () => {
                           }))
                         }
                       />
-
                     </div>
-
                   </div>
 
                   <div className="modal-footer">
-
                     <button
                       type="button"
                       className="btn btn-secondary"
-                      onClick={() =>
-                        setEditModalOpen(false)
-                      }
+                      onClick={() => setEditModalOpen(false)}
                     >
                       Cancel
                     </button>
-
-                    <button
-                      type="submit"
-                      className="btn btn-primary"
-                    >
-                      <FaFilePrescription />
-                      {' '}
-                      Issue Prescription
+                    <button type="submit" className="btn btn-primary">
+                      <FaFilePrescription /> Issue Prescription
                     </button>
-
                   </div>
-
                 </form>
-
               </div>
-
             </div>
-
           )}
 
           {/* DATALISTS */}
-
           <datalist id="frequencyOptionsList">
-
             {FREQUENCY_OPTIONS.map((freq, i) => (
               <option key={i} value={freq} />
             ))}
-
           </datalist>
 
           <datalist id="durationOptionsList">
-
             {DURATION_OPTIONS.map((dur, i) => (
               <option key={i} value={dur} />
             ))}
-
           </datalist>
-
         </main>
-
       </div>
-
     </div>
   );
 };

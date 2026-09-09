@@ -15,6 +15,14 @@ const Signup = () => {
     confirmPassword: '',
     role: ''
   });
+  const [fieldErrors, setFieldErrors] = useState({
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: ''
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
@@ -27,34 +35,59 @@ const Signup = () => {
       ...prev,
       [id]: value
     }));
+    if (fieldErrors[id]) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [id]: ''
+      }));
+    }
   };
 
   const validateForm = () => {
     const { name, email, phone, password, confirmPassword, role } = formData;
+    const errors = {};
 
-    if (!name || !email || !phone || !password || !confirmPassword || !role) {
-      return 'All fields are required.';
+    if (!name || !name.trim()) {
+      errors.name = 'Please enter your name.';
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return 'Please enter a valid email address.';
+    if (!role) {
+      errors.role = 'Please select your role.';
     }
 
-    const phoneRegex = /^[0-9]{10,15}$/;
-    if (!phoneRegex.test(phone.replace(/[\s-()]/g, ''))) {
-      return 'Please enter a valid phone number (10-15 digits).';
+    if (!email || !email.trim()) {
+      errors.email = 'Please enter your email.';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        errors.email = 'Please enter a valid email address.';
+      }
     }
 
-    if (password.length < 6) {
-      return 'Password must be at least 6 characters long.';
+    const phoneClean = (phone || '').replace(/[\s-()]/g, '');
+    if (!phone || !phone.trim()) {
+      errors.phone = 'Please enter your phone number.';
+    } else {
+      const phoneRegex = /^[0-9]{10,15}$/;
+      if (!phoneRegex.test(phoneClean)) {
+        errors.phone = 'Please enter a valid phone number (10-15 digits).';
+      }
     }
 
-    if (password !== confirmPassword) {
-      return 'Passwords do not match.';
+    if (!password) {
+      errors.password = 'Please enter your password.';
+    } else if (password.length < 6) {
+      errors.password = 'Password must be at least 6 characters long.';
     }
 
-    return null;
+    if (!confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password.';
+    } else if (password !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match.';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = (e) => {
@@ -62,9 +95,7 @@ const Signup = () => {
     setError('');
     setSuccess('');
 
-    const validationError = validateForm();
-    if (validationError) {
-      setError(validationError);
+    if (!validateForm()) {
       return;
     }
 
@@ -135,7 +166,7 @@ const Signup = () => {
           <div className="auth-card auth-card-signup">
             <div className="auth-heading-block">
               <h2>Create your account</h2>
-              <p>Keep the same fields, but give them a cleaner, more polished presentation.</p>
+              <p>Register to access a smarter and more connected healthcare experience.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="auth-form">
@@ -150,12 +181,13 @@ const Signup = () => {
                     <input
                       type="text"
                       id="name"
-                      className="auth-input-field"
-                      placeholder="Dr. Sarah Paul"
+                      className={`auth-input-field ${fieldErrors.name ? 'auth-input-error' : ''}`}
+                      placeholder="Enter yor name"
                       value={formData.name}
                       onChange={handleChange}
                     />
                   </div>
+                  {fieldErrors.name && <span className="auth-field-error-text">{fieldErrors.name}</span>}
                 </div>
 
                 <div className="auth-form-group">
@@ -164,7 +196,7 @@ const Signup = () => {
                     <FaUserTag className="auth-input-icon" />
                     <select
                       id="role"
-                      className="auth-input-field auth-select"
+                      className={`auth-input-field auth-select ${fieldErrors.role ? 'auth-input-error' : ''}`}
                       value={formData.role}
                       onChange={handleChange}
                     >
@@ -174,6 +206,7 @@ const Signup = () => {
                       <option value="pharmacist">Pharmacist</option>
                     </select>
                   </div>
+                  {fieldErrors.role && <span className="auth-field-error-text">{fieldErrors.role}</span>}
                 </div>
               </div>
 
@@ -185,12 +218,13 @@ const Signup = () => {
                     <input
                       type="email"
                       id="email"
-                      className="auth-input-field"
-                      placeholder="name@example.com"
+                      className={`auth-input-field ${fieldErrors.email ? 'auth-input-error' : ''}`}
+                      placeholder="Enter Your Name"
                       value={formData.email}
                       onChange={handleChange}
                     />
                   </div>
+                  {fieldErrors.email && <span className="auth-field-error-text">{fieldErrors.email}</span>}
                 </div>
 
                 <div className="auth-form-group">
@@ -200,12 +234,13 @@ const Signup = () => {
                     <input
                       type="tel"
                       id="phone"
-                      className="auth-input-field"
-                      placeholder="9876543210"
+                      className={`auth-input-field ${fieldErrors.phone ? 'auth-input-error' : ''}`}
+                      placeholder="Enter Your Phone Number"
                       value={formData.phone}
                       onChange={handleChange}
                     />
                   </div>
+                  {fieldErrors.phone && <span className="auth-field-error-text">{fieldErrors.phone}</span>}
                 </div>
               </div>
 
@@ -217,7 +252,7 @@ const Signup = () => {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       id="password"
-                      className="auth-input-field"
+                      className={`auth-input-field ${fieldErrors.password ? 'auth-input-error' : ''}`}
                       placeholder="Min 6 characters"
                       value={formData.password}
                       onChange={handleChange}
@@ -231,6 +266,7 @@ const Signup = () => {
                       {showPassword ? <FaEyeSlash /> : <FaEye />}
                     </button>
                   </div>
+                  {fieldErrors.password && <span className="auth-field-error-text">{fieldErrors.password}</span>}
                 </div>
 
                 <div className="auth-form-group">
@@ -240,7 +276,7 @@ const Signup = () => {
                     <input
                       type={showConfirmPassword ? 'text' : 'password'}
                       id="confirmPassword"
-                      className="auth-input-field"
+                      className={`auth-input-field ${fieldErrors.confirmPassword ? 'auth-input-error' : ''}`}
                       placeholder="Confirm password"
                       value={formData.confirmPassword}
                       onChange={handleChange}
@@ -254,6 +290,7 @@ const Signup = () => {
                       {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                     </button>
                   </div>
+                  {fieldErrors.confirmPassword && <span className="auth-field-error-text">{fieldErrors.confirmPassword}</span>}
                 </div>
               </div>
 

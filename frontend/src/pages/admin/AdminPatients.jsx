@@ -70,49 +70,6 @@ const AdminPatients = () => {
             </div>
           </div>
 
-          {/* Stats Grid */}
-          <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-primary">
-                <FaUserInjured />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Total Patients</span>
-                <span className="stat-number">{stats.total}</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-secondary">
-                <FaHeartbeat />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Active Treatments</span>
-                <span className="stat-number">{stats.active}</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-danger">
-                <FaHeartbeat />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Critical Status</span>
-                <span className="stat-number">{stats.critical}</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrapper stat-success">
-                <FaUserInjured />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">Recovered</span>
-                <span className="stat-number">{stats.recovered}</span>
-              </div>
-            </div>
-          </div>
-
           {/* Controls Bar */}
           <div className="admin-controls-bar">
             <div className="search-bar-wrapper admin-search-wrapper">

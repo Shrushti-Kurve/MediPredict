@@ -8,8 +8,7 @@ import {
   FaBell, 
   FaPills, 
   FaTimes,
-  FaUsers,
-  FaChartPie
+  FaUsers
 } from 'react-icons/fa';
 import { getLoggedInUser, logout } from '../../services/localStorageService';
 import logo from '../../assets/logo/logo.png';
@@ -190,14 +189,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             >
               <FaPills className="sidebar-icon" />
               <span>Medicines</span>
-            </NavLink>
-            <NavLink 
-              to="/admin/reports" 
-              className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
-              onClick={() => toggleSidebar && toggleSidebar(false)}
-            >
-              <FaChartPie className="sidebar-icon" />
-              <span>Reports</span>
             </NavLink>
             <NavLink 
               to="/admin/profile" 

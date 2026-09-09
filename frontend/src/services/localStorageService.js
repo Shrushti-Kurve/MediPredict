@@ -325,7 +325,7 @@ export const updatePatient = (updatedPatient) => {
 };
 
 // Dedicated Doctor Multi-Medicine Prescription Service
-export const prescribeMedicines = (patientId, { medicines = [], disease, notes, status }) => {
+export const prescribeMedicines = (patientId, { medicines = [], disease, symptoms, notes, status }) => {
   const patients = getPatients();
   const currentUser = getLoggedInUser();
   const index = patients.findIndex(p => p.id === patientId);
@@ -337,6 +337,7 @@ export const prescribeMedicines = (patientId, { medicines = [], disease, notes, 
   const updatedPatient = normalizePatient({
     ...originalPatient,
     disease: disease || originalPatient.disease,
+    symptoms: symptoms !== undefined ? symptoms : originalPatient.symptoms,
     medicines: medicines,
     doctor: currentUser?.name || originalPatient.doctor,
     clinicalNotes: notes !== undefined ? notes : originalPatient.clinicalNotes,
@@ -349,13 +350,17 @@ export const prescribeMedicines = (patientId, { medicines = [], disease, notes, 
 
   addAlert(
     'Info',
-    `Dr. ${currentUser?.name || 'Physician'} prescribed ${medicines.length} medicine(s) for ${updatedPatient.name}.`,
-    'hospitalStaff'
+    `Dr. ${currentUser?.name || 'Sarah Paul'} prescribed ${medicines.length} medicine(s) for ${updatedPatient.name}.`,
+    'hospitalStaff',
+    'Prescription Updated',
+    'medicine'
   );
   addAlert(
     'Info',
     `Prescription saved for ${updatedPatient.name} (${updatedPatient.id}).`,
-    'doctor'
+    'doctor',
+    'Prescription Saved',
+    'medicine'
   );
 
   return updatedPatient;
@@ -381,10 +386,28 @@ export const deletePatient = (patientId) => {
 };
 
 
+// Default descriptions map for known medicines
+const DEFAULT_MED_DESCRIPTIONS = {
+  "Metformin": "Used to control high blood sugar in patients with type 2 diabetes.",
+  "Amlodipine": "Used to treat high blood pressure (hypertension) and prevent chest pain (angina).",
+  "Amoxicillin": "Antibiotic used to treat a wide variety of bacterial infections including chest and throat infections.",
+  "Salbutamol Inhaler": "Used to quickly relieve breathing difficulties, wheezing, and chest tightness caused by asthma.",
+  "Atorvastatin": "Used along with a proper diet to lower 'bad' cholesterol and reduce the risk of heart complications.",
+  "Levothyroxine": "Used to treat hypothyroidism (underactive thyroid gland) to restore normal hormone levels.",
+  "Chloroquine": "Used to prevent and treat malaria caused by mosquito bites in rural sectors.",
+  "Iron Supplements": "Used to treat or prevent low blood levels of iron and manage iron-deficiency anemia.",
+  "Rifampicin": "Antibiotic used with other medications to treat tuberculosis (TB) and serious bacterial infections.",
+  "Paracetamol": "Used to reduce fever and relieve mild to moderate pain like headaches, body aches, and fever."
+};
+
 // --- MEDICINES SERVICES (Pharmacist) ---
 
 export const getMedicines = () => {
-  return JSON.parse(localStorage.getItem('medicines') || '[]');
+  const raw = JSON.parse(localStorage.getItem('medicines') || '[]');
+  return raw.map(m => ({
+    ...m,
+    description: m.description || DEFAULT_MED_DESCRIPTIONS[m.name] || `Used for therapeutic management and treatment of ${m.category || 'general conditions'}.`
+  }));
 };
 
 export const saveMedicines = (medicines) => {
@@ -399,6 +422,7 @@ export const addMedicine = (medicineData) => {
   const newMed = {
     ...medicineData,
     id: newId,
+    description: medicineData.description || DEFAULT_MED_DESCRIPTIONS[medicineData.name] || `Used for therapeutic management of ${medicineData.category || 'clinical conditions'}.`,
     quantity: parseInt(medicineData.quantity) || 0,
     minimumStock: parseInt(medicineData.minimumStock) || 0
   };
@@ -414,8 +438,10 @@ export const updateMedicine = (updatedMed) => {
   
   if (index !== -1) {
     medicines[index] = {
+      ...medicines[index],
       ...updatedMed,
-      quantity: parseInt(updatedMed.quantity) || 0,
+      description: updatedMed.description || medicines[index].description || DEFAULT_MED_DESCRIPTIONS[updatedMed.name] || '',
+      quantity: parseInt(updatedMed.quantity) >= 0 ? parseInt(updatedMed.quantity) : 0,
       minimumStock: parseInt(updatedMed.minimumStock) || 0
     };
     saveMedicines(medicines);
@@ -424,19 +450,77 @@ export const updateMedicine = (updatedMed) => {
   return null;
 };
 
+export const dispenseMedicine = (medicineId, quantity, patientName = '') => {
+  const qtyToDeduct = parseInt(quantity);
+  if (isNaN(qtyToDeduct) || qtyToDeduct <= 0) {
+    throw new Error('Please enter a valid quantity greater than 0.');
+  }
+
+  const medicines = getMedicines();
+  const index = medicines.findIndex(m => m.id === medicineId);
+
+  if (index === -1) {
+    throw new Error('Medicine not found in inventory.');
+  }
+
+  const med = medicines[index];
+  const currentQty = parseInt(med.quantity) || 0;
+
+  if (qtyToDeduct > currentQty) {
+    throw new Error(`Insufficient stock available. Only ${currentQty} units currently in stock.`);
+  }
+
+  const newQty = currentQty - qtyToDeduct;
+  medicines[index] = {
+    ...med,
+    quantity: newQty
+  };
+
+  saveMedicines(medicines);
+
+  // Add Log Alert for dispensing
+  const patientMsg = patientName ? ` to patient ${patientName}` : '';
+  addAlert(
+    'Info',
+    `Pharmacist dispensed ${qtyToDeduct} units of ${med.name}${patientMsg}. Remaining stock: ${newQty} units.`,
+    'pharmacist'
+  );
+
+  return medicines[index];
+};
+
 
 // --- ALERTS SERVICES ---
 
 export const getAlerts = () => {
-  return JSON.parse(localStorage.getItem('alerts') || '[]');
+  const raw = JSON.parse(localStorage.getItem('alerts') || '[]');
+  const list = Array.isArray(raw) && raw.length > 0 ? raw : mockAlerts;
+  return list.map(a => {
+    const text = `${a.title || ''} ${a.description || ''} ${a.message || ''}`.toLowerCase();
+    const isMed = a.category === 'medicine' || /medicine|stock|inventory|expiry|expired|units|paracetamol|amoxicillin|salbutamol|chloroquine|metformin|dispensed/i.test(text);
+    return {
+      ...a,
+      title: a.title || (isMed ? 'Medicine Inventory Alert' : 'Clinical Disease Alert'),
+      description: a.description || a.message || 'Alert notification recorded in system.',
+      message: a.message || a.description || 'Alert notification.',
+      category: a.category || (isMed ? 'medicine' : 'disease'),
+      severity: a.severity || a.type || 'Info',
+      type: a.type || a.severity || 'Info'
+    };
+  });
 };
 
-export const addAlert = (type, message, role = 'hospitalStaff') => {
+export const addAlert = (type, message, role = 'hospitalStaff', title = '', category = '') => {
   const alerts = getAlerts();
+  const isMed = category === 'medicine' || /medicine|stock|inventory|expiry|expired|units|paracetamol|amoxicillin|salbutamol|chloroquine|metformin|dispensed/i.test(message);
   const newAlert = {
     id: 'A' + Date.now() + Math.floor(Math.random() * 100),
-    type,
+    title: title || (isMed ? 'Medicine Stock Update' : 'System Clinical Alert'),
+    description: message,
     message,
+    category: category || (isMed ? 'medicine' : 'disease'),
+    type: type || 'Info',
+    severity: type || 'Info',
     date: new Date().toISOString().replace('T', ' ').slice(0, 16),
     role
   };
