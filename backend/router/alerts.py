@@ -11,7 +11,6 @@ router = APIRouter(
 
 @router.get("/")
 def get_alerts():
-
     query = text("""
         SELECT
             Alert_ID,
@@ -27,12 +26,11 @@ def get_alerts():
         FROM alerts
         WHERE Status = 'Active'
           AND Alert_Category IN ('DISEASE', 'MEDICINE')
-          AND Severity IN ('HIGH', 'MEDIUM')
           AND Alert_Date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
         ORDER BY
             CASE
-                WHEN Severity = 'HIGH' THEN 1
-                WHEN Severity = 'MEDIUM' THEN 2
+                WHEN Severity IN ('HIGH', 'CRITICAL', 'DANGER') THEN 1
+                WHEN Severity IN ('MEDIUM', 'WARNING') THEN 2
                 ELSE 3
             END,
             Alert_Date DESC,
@@ -48,13 +46,11 @@ def get_alerts():
 
 @router.get("/count")
 def get_alert_count():
-
     query = text("""
         SELECT COUNT(*) AS total
         FROM alerts
         WHERE Status = 'Active'
           AND Alert_Category IN ('DISEASE', 'MEDICINE')
-          AND Severity IN ('HIGH', 'MEDIUM')
           AND Alert_Date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
     """)
 

@@ -1,13 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from datetime import datetime
 
 from database import get_db
 from models import Patient
 from schemas import PatientCreate, PatientUpdate
-
-# Automatic prediction function
-from predict import run_automatic_prediction
 
 
 router = APIRouter(
@@ -17,7 +15,7 @@ router = APIRouter(
 
 
 # =========================================================
-# STAFF → ADD PATIENT
+# DELETE PATIENT (PRESERVE RECORD)
 # =========================================================
 
 @router.delete("/{patient_id}")
@@ -40,89 +38,98 @@ def delete_patient(
     }
 
 
+# =========================================================
+# STAFF → ADD PATIENT (Stored in DB, NO prediction/alert on add)
+# =========================================================
+
 @router.post("/")
 def add_patient(
     data: PatientCreate,
     db: Session = Depends(get_db)
 ):
-
     visit_date = None
 
     if data.Visit_Date:
-
         try:
-
             visit_date = datetime.strptime(
                 data.Visit_Date,
                 "%Y-%m-%d"
             ).date()
-
         except ValueError:
-
             raise HTTPException(
                 status_code=400,
                 detail="Visit_Date must be YYYY-MM-DD"
             )
 
     patient = Patient(
-
         Patient_Name=data.Patient_Name,
-
         Age=data.Age,
-
         Gender=data.Gender,
-
         Village=data.Village,
-
         Visit_Date=visit_date,
-
         Disease=data.Disease,
-
         Symptoms=data.Symptoms,
-
         Doctor=data.Doctor
-
     )
 
     db.add(patient)
-
     db.commit()
-
     db.refresh(patient)
-    # Try to run automatic prediction but do not fail patient creation on errors
-    prediction_result = None
 
-    try:
-        prediction_result = run_automatic_prediction()
-    except Exception as e:
-        prediction_result = {
-            "status": "prediction_error",
-            "message": str(e)
-        }
-
+    # NOTE: Adding a patient must NOT create an alert or trigger forecasting.
+    # Forecasting is only triggered after prescriptions are completed.
     return {
-
         "status": "success",
-
         "message": "Patient added successfully",
-
         "Patient_ID": patient.Patient_ID,
-
-        "Patient_Name": patient.Patient_Name,
-
-        "automatic_prediction": prediction_result
-
+        "Patient_Name": patient.Patient_Name
     }
 
 
 # =========================================================
-# DOCTOR / STAFF → VIEW ALL PATIENTS
+# VIEW PENDING PATIENTS (Awaiting prescription)
+# =========================================================
+
+@router.get("/pending")
+def get_pending_patients(
+    db: Session = Depends(get_db)
+):
+    query = text("""
+        SELECT p.*
+        FROM patients p
+        WHERE NOT EXISTS (
+            SELECT 1 FROM prescriptions pr WHERE pr.Patient_ID = p.Patient_ID
+        ) AND NOT EXISTS (
+            SELECT 1 FROM medicine_transactions mt WHERE mt.Patient_ID = p.Patient_ID
+        )
+        ORDER BY p.Patient_ID DESC
+    """)
+    result = db.execute(query).mappings().all()
+    return [dict(row) for row in result]
+
+
+# =========================================================
+# DOCTOR / STAFF → VIEW ALL PATIENTS OR PENDING
 # =========================================================
 
 @router.get("/")
 def get_patients(
+    pending: bool = False,
     db: Session = Depends(get_db)
 ):
+    if pending:
+        query = text("""
+            SELECT p.*
+            FROM patients p
+            WHERE NOT EXISTS (
+                SELECT 1 FROM prescriptions pr WHERE pr.Patient_ID = p.Patient_ID
+            ) AND NOT EXISTS (
+                SELECT 1 FROM medicine_transactions mt WHERE mt.Patient_ID = p.Patient_ID
+            )
+            ORDER BY p.Patient_ID DESC
+        """)
+        result = db.execute(query).mappings().all()
+        return [dict(row) for row in result]
 
     patients = db.query(Patient).order_by(
         Patient.Patient_ID.desc()
@@ -140,13 +147,11 @@ def get_patient(
     patient_id: int,
     db: Session = Depends(get_db)
 ):
-
     patient = db.query(Patient).filter(
         Patient.Patient_ID == patient_id
     ).first()
 
     if not patient:
-
         raise HTTPException(
             status_code=404,
             detail="Patient not found"
@@ -165,123 +170,40 @@ def update_patient(
     data: PatientUpdate,
     db: Session = Depends(get_db)
 ):
-
     patient = db.query(Patient).filter(
         Patient.Patient_ID == patient_id
     ).first()
 
     if not patient:
-
         raise HTTPException(
             status_code=404,
             detail="Patient not found"
         )
 
-
-    # -----------------------------------------------------
-    # UPDATE DISEASE
-    # -----------------------------------------------------
-
     if data.Disease is not None:
-
         patient.Disease = data.Disease
 
-
-    # -----------------------------------------------------
-    # UPDATE SYMPTOMS
-    # -----------------------------------------------------
-
     if data.Symptoms is not None:
-
         patient.Symptoms = data.Symptoms
 
-
-    # -----------------------------------------------------
-    # UPDATE DOCTOR
-    # -----------------------------------------------------
-
     if data.Doctor is not None:
-
         patient.Doctor = data.Doctor
 
-
-    # -----------------------------------------------------
-    # UPDATE DOCTOR USER ID
-    # -----------------------------------------------------
-
     if data.Doctor_User_ID is not None:
-
         patient.Doctor_User_ID = data.Doctor_User_ID
 
-
-    # Save doctor changes
     db.commit()
-
     db.refresh(patient)
 
-
-    # =====================================================
-    # AUTOMATIC PREDICTION TRIGGER
-    # =====================================================
-    #
-    # The doctor does NOT click Predict.
-    #
-    # After the patient is updated, the backend checks:
-    #
-    #       diagnosed patients >= PATIENT_TRIGGER
-    #
-    # If yes → prediction automatically runs.
-    #
-    # Currently PATIENT_TRIGGER = 2 for your hackathon test.
-    # Later change it to 100 in predict.py.
-    # =====================================================
-
-    prediction_result = None
-
-    try:
-
-        prediction_result = run_automatic_prediction()
-
-    except Exception as e:
-
-        # Patient update should NOT fail just because
-        # prediction has an error.
-
-        prediction_result = {
-
-            "status": "prediction_error",
-
-            "message": str(e)
-
-        }
-
-
-    # =====================================================
-    # RESPONSE
-    # =====================================================
-
     return {
-
         "status": "success",
-
         "message": "Patient updated successfully",
-
         "patient": {
-
             "Patient_ID": patient.Patient_ID,
-
             "Patient_Name": patient.Patient_Name,
-
             "Disease": patient.Disease,
-
             "Symptoms": patient.Symptoms,
-
             "Doctor": patient.Doctor,
-
             "Doctor_User_ID": patient.Doctor_User_ID
-
-        },
-
-        "automatic_prediction": prediction_result
-
+        }
     }

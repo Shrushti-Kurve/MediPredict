@@ -50,6 +50,8 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
   });
 
   const [qtyValue, setQtyValue] = useState(0);
+  const [qtyExpiryDate, setQtyExpiryDate] = useState('');
+  const [medicineExpiryDate, setMedicineExpiryDate] = useState('');
 
   // Dispense Form State
   const [dispenseForm, setDispenseForm] = useState({
@@ -139,21 +141,37 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
   const handleOpenQtyModal = (med) => {
     setSelectedMed(med);
     setQtyValue(med.quantity);
+    setMedicineExpiryDate(med.expiryDate || '');
+    setQtyExpiryDate(med.newStockExpiryDate || '');
     setQtyModalOpen(true);
   };
 
   const handleQtySubmit = (e) => {
     e.preventDefault();
     if (selectedMed) {
+      if (!medicineExpiryDate) {
+        alert('Please keep the original medicine expiry date or update it in the edit screen before adding new stock.');
+        return;
+      }
+
+      if (!qtyExpiryDate) {
+        alert('Please add the new stock batch expiry date for this medicine.');
+        return;
+      }
+
       const updated = {
         ...selectedMed,
-        quantity: parseInt(qtyValue) >= 0 ? parseInt(qtyValue) : 0
+        quantity: parseInt(qtyValue) >= 0 ? parseInt(qtyValue) : 0,
+        expiryDate: medicineExpiryDate,
+        newStockExpiryDate: qtyExpiryDate
       };
       updateMedicine(updated);
       loadMedicines();
       setQtyModalOpen(false);
       setSelectedMed(null);
-      alert('Medicine stock quantity updated successfully.');
+      setMedicineExpiryDate('');
+      setQtyExpiryDate('');
+      alert('Medicine stock quantity and batch expiry date updated successfully.');
     }
   };
 
@@ -273,7 +291,7 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
                     <th>Category</th>
                     <th>Available Qty</th>
                     <th>Min Stock</th>
-                    <th>Expiry Date</th>
+                    <th>Expiry Dates</th>
                     <th>Supplier</th>
                     <th>Status</th>
                     <th className="text-center">Actions</th>
@@ -293,7 +311,12 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
                           </span>
                         </td>
                         <td>{med.minimumStock}</td>
-                        <td>{med.expiryDate}</td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span><strong>Medicine:</strong> {med.expiryDate || '—'}</span>
+                            <span><strong>New Stock:</strong> {med.newStockExpiryDate || '—'}</span>
+                          </div>
+                        </td>
                         <td>{med.supplier}</td>
                         <td>
                           <span className={status.class}>
@@ -389,8 +412,12 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
                       <span className="detail-val">{selectedMed.minimumStock} units</span>
                     </div>
                     <div className="detail-field">
-                      <span className="detail-label">Expiry Date</span>
-                      <span className="detail-val">{selectedMed.expiryDate}</span>
+                      <span className="detail-label">Medicine Expiry Date</span>
+                      <span className="detail-val">{selectedMed.expiryDate || 'Not set'}</span>
+                    </div>
+                    <div className="detail-field">
+                      <span className="detail-label">New Stock Expiry Date</span>
+                      <span className="detail-val">{selectedMed.newStockExpiryDate || 'Not set'}</span>
                     </div>
                     <div className="detail-field">
                       <span className="detail-label">Current Status</span>
@@ -674,7 +701,7 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
                       Update current stock for <strong>{selectedMed.name}</strong>.
                     </p>
                     <div className="form-group">
-                      <label htmlFor="quick-qty">Available Quantity</label>
+                      <label htmlFor="quick-qty">Available Quantity *</label>
                       <input
                         type="number"
                         id="quick-qty"
@@ -684,6 +711,30 @@ const MedicineStock = ({ readOnly = false, title = 'Medicine Inventory', subtitl
                         onChange={(e) => setQtyValue(parseInt(e.target.value) || 0)}
                         required
                         autoFocus
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="medicine-expiry-date">Medicine Expiry Date *</label>
+                      <input
+                        type="date"
+                        id="medicine-expiry-date"
+                        className="form-control"
+                        value={medicineExpiryDate}
+                        onChange={(e) => setMedicineExpiryDate(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="quick-expiry-date">New Stock / Batch Expiry Date *</label>
+                      <input
+                        type="date"
+                        id="quick-expiry-date"
+                        className="form-control"
+                        value={qtyExpiryDate}
+                        onChange={(e) => setQtyExpiryDate(e.target.value)}
+                        required
                       />
                     </div>
                   </div>

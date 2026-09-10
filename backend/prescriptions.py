@@ -5,7 +5,7 @@ from datetime import datetime
 
 from database import get_db
 from notifications import create_notification_for_alert
-from predict import run_automatic_prediction
+from predict import run_automatic_prediction, PATIENT_TRIGGER
 
 
 router = APIRouter(
@@ -26,23 +26,18 @@ def prescribe_medicine(
     user_id: int = None,
     db: Session = Depends(get_db)
 ):
-
     # -----------------------------------------------------
     # Validate quantity
     # -----------------------------------------------------
-
     if quantity <= 0:
-
         raise HTTPException(
             status_code=400,
             detail="Quantity must be greater than 0"
         )
 
-
     # -----------------------------------------------------
     # Check patient
     # -----------------------------------------------------
-
     patient_query = text("""
         SELECT
             Patient_ID,
@@ -55,24 +50,18 @@ def prescribe_medicine(
 
     patient = db.execute(
         patient_query,
-        {
-            "patient_id": patient_id
-        }
+        {"patient_id": patient_id}
     ).mappings().first()
 
-
     if not patient:
-
         raise HTTPException(
             status_code=404,
             detail="Patient not found"
         )
 
-
     # -----------------------------------------------------
     # Check medicine
     # -----------------------------------------------------
-
     medicine_query = text("""
         SELECT
             Medicine_ID,
@@ -87,43 +76,34 @@ def prescribe_medicine(
 
     medicine = db.execute(
         medicine_query,
-        {
-            "medicine_id": medicine_id
-        }
+        {"medicine_id": medicine_id}
     ).mappings().first()
 
-
     if not medicine:
-
         raise HTTPException(
             status_code=404,
             detail="Medicine not found"
         )
 
-
     # -----------------------------------------------------
     # CHECK EXPIRY
     # -----------------------------------------------------
-
     if medicine["Expiry_Date"]:
-
-        if medicine["Expiry_Date"] < datetime.now().date():
-
+        expiry = medicine["Expiry_Date"]
+        if hasattr(expiry, "date"):
+            expiry = expiry.date()
+        if expiry < datetime.now().date():
             raise HTTPException(
                 status_code=400,
                 detail=f"{medicine['Medicine_Name']} is expired"
             )
 
-
     # -----------------------------------------------------
     # CHECK STOCK
     # -----------------------------------------------------
-
     current_stock = medicine["Current_Stock"] or 0
 
-
     if current_stock < quantity:
-
         raise HTTPException(
             status_code=400,
             detail={
@@ -134,54 +114,73 @@ def prescribe_medicine(
             }
         )
 
-
     # -----------------------------------------------------
     # DEDUCT MEDICINE
     # -----------------------------------------------------
-
     new_stock = current_stock - quantity
 
-
     if new_stock <= 0:
-
         new_status = "OUT_OF_STOCK"
-
     elif new_stock <= (medicine["Reorder_Level"] or 0):
-
         new_status = "LOW"
-
     else:
-
         new_status = "AVAILABLE"
-
 
     update_query = text("""
         UPDATE medicines
-
         SET
             Current_Stock = :new_stock,
             Stock_Status = :new_status
-
         WHERE Medicine_ID = :medicine_id
     """)
-
 
     db.execute(
         update_query,
         {
             "new_stock": new_stock,
-
             "new_status": new_status,
-
             "medicine_id": medicine_id
         }
     )
 
+    # -----------------------------------------------------
+    # RECORD PRESCRIPTION RECORD
+    # -----------------------------------------------------
+    prescription_query = text("""
+        INSERT INTO prescriptions
+        (
+            Patient_ID,
+            Patient_Name,
+            Medicine_Name,
+            Quantity,
+            User_ID,
+            Prescription_Date
+        )
+        VALUES
+        (
+            :patient_id,
+            :patient_name,
+            :medicine_name,
+            :quantity,
+            :user_id,
+            NOW()
+        )
+    """)
+
+    db.execute(
+        prescription_query,
+        {
+            "patient_id": patient_id,
+            "patient_name": patient["Patient_Name"],
+            "medicine_name": medicine["Medicine_Name"],
+            "quantity": quantity,
+            "user_id": user_id
+        }
+    )
 
     # -----------------------------------------------------
     # ADD TRANSACTION
     # -----------------------------------------------------
-
     transaction_query = text("""
         INSERT INTO medicine_transactions
         (
@@ -192,7 +191,6 @@ def prescribe_medicine(
             Transaction_Date,
             User_ID
         )
-
         VALUES
         (
             :patient_id,
@@ -204,30 +202,22 @@ def prescribe_medicine(
         )
     """)
 
-
     db.execute(
         transaction_query,
         {
             "patient_id": patient_id,
-
             "medicine_id": medicine_id,
-
             "quantity": quantity,
-
             "user_id": user_id
         }
     )
 
-
     # -----------------------------------------------------
-    # GENERATE STOCK ALERT
+    # GENERATE STOCK ALERT IF LOW OR OUT_OF_STOCK
     # -----------------------------------------------------
-
     alert_id = None
 
-
     if new_status == "LOW":
-
         alert_query = text("""
             INSERT INTO alerts
             (
@@ -241,7 +231,6 @@ def prescribe_medicine(
                 Alert_Date,
                 Status
             )
-
             VALUES
             (
                 :medicine_id,
@@ -256,27 +245,21 @@ def prescribe_medicine(
             )
         """)
 
-
         result = db.execute(
             alert_query,
             {
                 "medicine_id": medicine_id,
-
                 "disease": patient["Disease"],
-
                 "village": patient["Village"],
-
-                "message":
+                "message": (
                     f"{medicine['Medicine_Name']} stock is low. "
                     f"Only {new_stock} units remaining."
+                )
             }
         )
-
         alert_id = result.lastrowid
 
-
     elif new_status == "OUT_OF_STOCK":
-
         alert_query = text("""
             INSERT INTO alerts
             (
@@ -290,7 +273,6 @@ def prescribe_medicine(
                 Alert_Date,
                 Status
             )
-
             VALUES
             (
                 :medicine_id,
@@ -305,85 +287,78 @@ def prescribe_medicine(
             )
         """)
 
-
         result = db.execute(
             alert_query,
             {
                 "medicine_id": medicine_id,
-
                 "disease": patient["Disease"],
-
                 "village": patient["Village"],
-
-                "message":
-                    f"{medicine['Medicine_Name']} is OUT OF STOCK."
+                "message": f"{medicine['Medicine_Name']} is OUT OF STOCK."
             }
         )
-
         alert_id = result.lastrowid
 
-
-    # -----------------------------------------------------
-    # CREATE NOTIFICATIONS FOR ALL USERS
-    # -----------------------------------------------------
-
     if alert_id:
-        title = f"Medicine {new_status}"
-        message = (
-            f"{medicine['Medicine_Name']} stock status is {new_status}. "
-            f"Remaining stock: {new_stock}"
-        )
         severity = "MEDIUM" if new_status == "LOW" else "HIGH"
         create_notification_for_alert(
             db,
             alert_id,
-            title,
-            message,
+            f"Medicine {new_status}: {medicine['Medicine_Name']}",
+            f"{medicine['Medicine_Name']} stock status is {new_status}. Remaining stock: {new_stock}",
             severity,
             "/alerts",
         )
 
-
     # -----------------------------------------------------
-    # DO NOT hard-delete the patient record.
-    # The patient should leave the pending queue after prescription,
-    # but remain in the system for historical analysis and forecasting.
+    # CRITICAL: DO NOT DELETE THE PATIENT MASTER RECORD!
+    # The prescribed patient automatically leaves the pending list
+    # because they now have an entry in prescriptions table,
+    # but their record remains permanently in patients table.
     # -----------------------------------------------------
-
     db.commit()
 
+    # -----------------------------------------------------
+    # CHECK TRIGGER: Detect required completed real patient records
+    # If completed patients >= PATIENT_TRIGGER (2 for demo)
+    # -> Run EXISTING disease analysis / forecasting immediately!
+    # -----------------------------------------------------
+    completed_count_query = text("""
+        SELECT COUNT(DISTINCT p.Patient_ID) AS total
+        FROM patients p
+        WHERE p.Disease IS NOT NULL
+          AND (
+            EXISTS (SELECT 1 FROM prescriptions pr WHERE pr.Patient_ID = p.Patient_ID)
+            OR EXISTS (SELECT 1 FROM medicine_transactions mt WHERE mt.Patient_ID = p.Patient_ID)
+          )
+    """)
+    completed_total = db.execute(completed_count_query).scalar() or 0
 
-    try:
-        forecast_result = run_automatic_prediction()
-    except Exception as exc:
+    forecast_result = None
+    if completed_total >= PATIENT_TRIGGER:
+        try:
+            forecast_result = run_automatic_prediction()
+        except Exception as exc:
+            forecast_result = {
+                "status": "prediction_error",
+                "message": str(exc)
+            }
+    else:
         forecast_result = {
-            "status": "prediction_error",
-            "message": str(exc)
+            "status": "waiting",
+            "completed_patients": completed_total,
+            "required_patients": PATIENT_TRIGGER,
+            "message": f"{completed_total} of {PATIENT_TRIGGER} required completed patient records."
         }
 
-    # -----------------------------------------------------
-    # RESPONSE
-    # -----------------------------------------------------
-
     return {
-
         "status": "success",
-
         "message": "Medicine prescribed successfully",
-
         "patient": patient["Patient_Name"],
-
         "medicine": medicine["Medicine_Name"],
-
         "quantity_dispensed": quantity,
-
         "remaining_stock": new_stock,
-
         "stock_status": new_status,
-
-        "alert_generated":
-            alert_id is not None,
-
+        "alert_generated": alert_id is not None,
+        "completed_patients": completed_total,
         "forecast_result": forecast_result
-
     }

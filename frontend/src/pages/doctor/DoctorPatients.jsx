@@ -90,9 +90,13 @@ const DoctorPatients = () => {
   }, []);
 
   // =====================================================
-  // SEARCH
+  // SEARCH & PENDING FILTER
+  // Only patients awaiting doctor prescription appear here
   // =====================================================
   const filteredPatients = patients.filter(patient => {
+    const isPending = patient.status !== 'Prescribed' && !patient.prescribed && patient.pendingPrescription !== false;
+    if (!isPending) return false;
+
     const name = String(patient.name || '').toLowerCase();
     const id = String(patient.id || '').toLowerCase();
     const address = String(patient.address || '').toLowerCase();

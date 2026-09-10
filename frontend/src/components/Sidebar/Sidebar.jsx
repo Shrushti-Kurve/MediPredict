@@ -206,7 +206,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   };
 
   return (
-    <aside className={`dashboard-sidebar ${isOpen ? 'open' : ''}`}>
+    <aside className="dashboard-sidebar open">
       <div className="sidebar-header">
         <Link to="/" className="sidebar-logo-container">
           <img src={logo} alt="MediPredict Logo" className="sidebar-logo" />

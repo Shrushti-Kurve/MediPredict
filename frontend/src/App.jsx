@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { initializeData } from './services/localStorageService';
+import { initializeData, getLoggedInUser } from './services/localStorageService';
 
 // Import Global Stylesheet (which loads variable tokens)
 import './styles/global.css';
@@ -224,11 +224,29 @@ function App() {
           } 
         />
 
+        {/* Dynamic Alerts route for all roles */}
+        <Route 
+          path="/alerts" 
+          element={
+            <ProtectedRoute allowedRoles={['doctor', 'hospitalStaff', 'pharmacist', 'admin']}>
+              <RoleAlertsRedirect />
+            </ProtectedRoute>
+          } 
+        />
+
         {/* Catch-all fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
 }
+
+const RoleAlertsRedirect = () => {
+  const user = getLoggedInUser();
+  if (user?.role === 'hospitalStaff') return <Navigate to="/hospital/alerts" replace />;
+  if (user?.role === 'pharmacist') return <Navigate to="/pharmacist/alerts" replace />;
+  if (user?.role === 'admin') return <Navigate to="/admin/alerts" replace />;
+  return <Navigate to="/doctor/alerts" replace />;
+};
 
 export default App;

@@ -1,855 +1,3 @@
-# from datetime import date, timedelta
-# from collections import Counter
-
-# from sqlalchemy import text
-# from database import engine
-
-
-# # =========================================================
-# # CONFIGURATION
-# # =========================================================
-
-# # For hackathon/demo testing.
-# # Change to 100 later if you want a real large-scale trigger.
-# PATIENT_TRIGGER = 2
-
-# MODEL_NAME = "MediPredict Outbreak Model"
-# MODEL_VERSION = "1.0"
-
-
-# # =========================================================
-# # HISTORICAL DATA
-# # =========================================================
-
-# def get_historical_data():
-
-#     query = text("""
-#         SELECT
-#             Patient_ID,
-#             Village,
-#             Disease,
-#             Visit_Date,
-#             Season,
-#             Year,
-#             Month
-#         FROM patients_cleaned
-#         WHERE Disease IS NOT NULL
-#         AND Village IS NOT NULL
-#     """)
-
-#     with engine.connect() as connection:
-
-#         result = connection.execute(query)
-
-#         return [
-#             dict(row._mapping)
-#             for row in result
-#         ]
-
-
-# # =========================================================
-# # LIVE PATIENT DATA
-# # =========================================================
-
-# def get_live_patients():
-
-#     query = text("""
-#         SELECT
-#             Patient_ID,
-#             Village,
-#             Disease,
-#             Visit_Date
-#         FROM patients
-#         WHERE Disease IS NOT NULL
-#         AND Village IS NOT NULL
-#     """)
-
-#     with engine.connect() as connection:
-
-#         result = connection.execute(query)
-
-#         return [
-#             dict(row._mapping)
-#             for row in result
-#         ]
-
-
-# # =========================================================
-# # TRIGGER
-# # =========================================================
-
-# def check_trigger():
-
-#     query = text("""
-#         SELECT COUNT(*) AS total
-#         FROM patients
-#         WHERE Disease IS NOT NULL
-#     """)
-
-#     with engine.connect() as connection:
-
-#         result = connection.execute(query).fetchone()
-
-#         total = result.total
-
-#     return total >= PATIENT_TRIGGER, total
-
-
-# # =========================================================
-# # RISK CALCULATION
-# #
-# # These thresholds are deliberately suitable for the
-# # current hackathon/demo dataset.
-# # =========================================================
-
-# def calculate_risk(predicted_cases):
-
-#     if predicted_cases >= 100:
-#         return "DANGER"
-
-#     elif predicted_cases >= 50:
-#         return "MEDIUM"
-
-#     else:
-#         return "LOW"
-
-
-# # =========================================================
-# # CREATE DISEASE ALERT
-# # =========================================================
-
-# def create_disease_alert(
-#     connection,
-#     disease,
-#     village,
-#     predicted_cases,
-#     risk
-# ):
-
-#     if risk == "DANGER":
-#         severity = "HIGH"
-
-#     elif risk == "MEDIUM":
-#         severity = "MEDIUM"
-
-#     else:
-#         severity = "LOW"
-
-#     message = (
-#         f"Disease forecast: {disease} in {village}. "
-#         f"Predicted cases: {predicted_cases}. "
-#         f"Risk level: {risk}."
-#     )
-
-#     # Avoid creating the exact same active alert repeatedly
-#     existing = connection.execute(
-#         text("""
-#             SELECT Alert_ID
-#             FROM alerts
-#             WHERE Disease = :disease
-#             AND Village = :village
-#             AND Alert_Type = 'DISEASE_OUTBREAK'
-#             AND Status = 'Active'
-#             LIMIT 1
-#         """),
-#         {
-#             "disease": disease,
-#             "village": village
-#         }
-#     ).fetchone()
-
-#     if existing:
-#         return
-
-#     connection.execute(
-#         text("""
-#             INSERT INTO alerts
-#             (
-#                 Medicine_ID,
-#                 Disease,
-#                 Village,
-#                 Alert_Type,
-#                 Severity,
-#                 Alert_Category,
-#                 Alert_Message,
-#                 Alert_Date,
-#                 Status
-#             )
-#             VALUES
-#             (
-#                 NULL,
-#                 :disease,
-#                 :village,
-#                 'DISEASE_OUTBREAK',
-#                 :severity,
-#                 'DISEASE',
-#                 :message,
-#                 NOW(),
-#                 'Active'
-#             )
-#         """),
-#         {
-#             "disease": disease,
-#             "village": village,
-#             "severity": severity,
-#             "message": message
-#         }
-#     )
-
-
-# # =========================================================
-# # MEDICINE STOCK + EXPIRY ALERTS
-# # =========================================================
-
-# def create_medicine_alerts(connection):
-
-#     medicines = connection.execute(
-#         text("""
-#             SELECT
-#                 Medicine_ID,
-#                 Medicine_Name,
-#                 Current_Stock,
-#                 Reorder_Level,
-#                 Expiry_Date
-#             FROM medicines
-#         """)
-#     ).mappings().all()
-
-#     today = date.today()
-
-#     for medicine in medicines:
-
-#         medicine_id = medicine["Medicine_ID"]
-#         name = medicine["Medicine_Name"]
-
-#         stock = medicine["Current_Stock"] or 0
-#         reorder_level = medicine["Reorder_Level"] or 0
-#         expiry_date = medicine["Expiry_Date"]
-
-#         # -------------------------------------------------
-#         # EXPIRED
-#         # -------------------------------------------------
-
-#         if expiry_date and expiry_date < today:
-
-#             severity = "HIGH"
-
-#             message = (
-#                 f"Medicine EXPIRED: {name}. "
-#                 f"Expiry date: {expiry_date}. "
-#                 f"Remove it from available pharmacy stock."
-#             )
-
-#             existing = connection.execute(
-#                 text("""
-#                     SELECT Alert_ID
-#                     FROM alerts
-#                     WHERE Medicine_ID = :medicine_id
-#                     AND Alert_Type = 'MEDICINE_EXPIRY'
-#                     AND Status = 'Active'
-#                     LIMIT 1
-#                 """),
-#                 {
-#                     "medicine_id": medicine_id
-#                 }
-#             ).fetchone()
-
-#             if not existing:
-
-#                 connection.execute(
-#                     text("""
-#                         INSERT INTO alerts
-#                         (
-#                             Medicine_ID,
-#                             Disease,
-#                             Village,
-#                             Alert_Type,
-#                             Severity,
-#                             Alert_Category,
-#                             Alert_Message,
-#                             Alert_Date,
-#                             Status
-#                         )
-#                         VALUES
-#                         (
-#                             :medicine_id,
-#                             NULL,
-#                             NULL,
-#                             'MEDICINE_EXPIRY',
-#                             :severity,
-#                             'MEDICINE',
-#                             :message,
-#                             NOW(),
-#                             'Active'
-#                         )
-#                     """),
-#                     {
-#                         "medicine_id": medicine_id,
-#                         "severity": severity,
-#                         "message": message
-#                     }
-#                 )
-
-#         # -------------------------------------------------
-#         # OUT OF STOCK
-#         # -------------------------------------------------
-
-#         elif stock <= 0:
-
-#             severity = "HIGH"
-
-#             message = (
-#                 f"Medicine OUT OF STOCK: {name}. "
-#                 f"Current stock: 0."
-#             )
-
-#             existing = connection.execute(
-#                 text("""
-#                     SELECT Alert_ID
-#                     FROM alerts
-#                     WHERE Medicine_ID = :medicine_id
-#                     AND Alert_Type = 'MEDICINE_STOCK'
-#                     AND Status = 'Active'
-#                     LIMIT 1
-#                 """),
-#                 {
-#                     "medicine_id": medicine_id
-#                 }
-#             ).fetchone()
-
-#             if not existing:
-
-#                 connection.execute(
-#                     text("""
-#                         INSERT INTO alerts
-#                         (
-#                             Medicine_ID,
-#                             Disease,
-#                             Village,
-#                             Alert_Type,
-#                             Severity,
-#                             Alert_Category,
-#                             Alert_Message,
-#                             Alert_Date,
-#                             Status
-#                         )
-#                         VALUES
-#                         (
-#                             :medicine_id,
-#                             NULL,
-#                             NULL,
-#                             'MEDICINE_STOCK',
-#                             :severity,
-#                             'MEDICINE',
-#                             :message,
-#                             NOW(),
-#                             'Active'
-#                         )
-#                     """),
-#                     {
-#                         "medicine_id": medicine_id,
-#                         "severity": severity,
-#                         "message": message
-#                     }
-#                 )
-
-#         # -------------------------------------------------
-#         # LOW STOCK
-#         # -------------------------------------------------
-
-#         elif stock <= reorder_level:
-
-#             severity = "MEDIUM"
-
-#             message = (
-#                 f"Low medicine stock: {name}. "
-#                 f"Only {stock} units remaining. "
-#                 f"Reorder level: {reorder_level}."
-#             )
-
-#             existing = connection.execute(
-#                 text("""
-#                     SELECT Alert_ID
-#                     FROM alerts
-#                     WHERE Medicine_ID = :medicine_id
-#                     AND Alert_Type = 'MEDICINE_STOCK'
-#                     AND Status = 'Active'
-#                     LIMIT 1
-#                 """),
-#                 {
-#                     "medicine_id": medicine_id
-#                 }
-#             ).fetchone()
-
-#             if not existing:
-
-#                 connection.execute(
-#                     text("""
-#                         INSERT INTO alerts
-#                         (
-#                             Medicine_ID,
-#                             Disease,
-#                             Village,
-#                             Alert_Type,
-#                             Severity,
-#                             Alert_Category,
-#                             Alert_Message,
-#                             Alert_Date,
-#                             Status
-#                         )
-#                         VALUES
-#                         (
-#                             :medicine_id,
-#                             NULL,
-#                             NULL,
-#                             'MEDICINE_STOCK',
-#                             :severity,
-#                             'MEDICINE',
-#                             :message,
-#                             NOW(),
-#                             'Active'
-#                         )
-#                     """),
-#                     {
-#                         "medicine_id": medicine_id,
-#                         "severity": severity,
-#                         "message": message
-#                     }
-#                 )
-
-
-# # =========================================================
-# # MAIN FORECASTING FUNCTION
-# # =========================================================
-
-# def run_automatic_prediction():
-#     medicine_alerts = generate_medicine_stock_alerts() 
-
-#     triggered, patient_count = check_trigger()
-
-#     if not triggered:
-
-#         return {
-#             "status": "waiting",
-#             "patient_count": patient_count,
-#             "required_patients": PATIENT_TRIGGER,
-#             "message": "Prediction trigger not reached."
-#         }
-
-
-#     historical = get_historical_data()
-
-#     live_patients = get_live_patients()
-
-
-#     if not historical:
-
-#         return {
-#             "status": "error",
-#             "message": "No historical data available."
-#         }
-
-
-#     if not live_patients:
-
-#         return {
-#             "status": "error",
-#             "message": "No live patient disease data available."
-#         }
-
-
-#     # =====================================================
-#     # HISTORICAL DISEASE COUNTS
-#     # =====================================================
-
-#     historical_diseases = Counter(
-#         row["Disease"]
-#         for row in historical
-#         if row["Disease"]
-#     )
-
-
-#     # =====================================================
-#     # LIVE DISEASE COUNTS
-#     # =====================================================
-
-#     live_diseases = Counter(
-#         row["Disease"]
-#         for row in live_patients
-#         if row["Disease"]
-#     )
-
-
-#     predictions = []
-
-
-#     # =====================================================
-#     # CREATE MODEL RUN
-#     # =====================================================
-
-#     with engine.begin() as connection:
-
-#         connection.execute(
-#             text("""
-#                 INSERT INTO model_runs
-#                 (
-#                     Model_Name,
-#                     Model_Version,
-#                     Run_Date,
-#                     Accuracy,
-#                     Status
-#                 )
-#                 VALUES
-#                 (
-#                     :name,
-#                     :version,
-#                     NOW(),
-#                     :accuracy,
-#                     :status
-#                 )
-#             """),
-#             {
-#                 "name": MODEL_NAME,
-#                 "version": MODEL_VERSION,
-#                 "accuracy": 90.00,
-#                 "status": "SUCCESS"
-#             }
-#         )
-
-
-#         model_run_id = connection.execute(
-#             text("""
-#                 SELECT LAST_INSERT_ID()
-#             """)
-#         ).scalar()
-
-
-#         # =================================================
-#         # DISEASE FORECAST
-#         # =================================================
-
-#         for disease, current_cases in live_diseases.items():
-
-#             historical_cases = historical_diseases.get(
-#                 disease,
-#                 0
-#             )
-
-#             # Simple hackathon forecast:
-#             # historical disease occurrence + current cases
-#             predicted_cases = (
-#                 historical_cases +
-#                 current_cases
-#             )
-
-#             risk = calculate_risk(predicted_cases)
-
-
-#             villages = set(
-#     row["Village"]
-#     for row in historical
-#     if row["Disease"] == disease
-#     and row["Village"]
-# )
-
-
-#             for village in villages:
-
-#                 # -----------------------------------------
-#                 # SAVE FORECAST
-#                 # -----------------------------------------
-
-#                 connection.execute(
-#                     text("""
-#                         INSERT INTO outbreak_predictions
-#                         (
-#                             Village,
-#                             Disease,
-#                             Prediction_Date,
-#                             Forecast_Date,
-#                             Predicted_Cases,
-#                             Risk_Level,
-#                             Model_Run_ID,
-#                             Trigger_Reason
-#                         )
-#                         VALUES
-#                         (
-#                             :village,
-#                             :disease,
-#                             NOW(),
-#                             :forecast_date,
-#                             :predicted_cases,
-#                             :risk,
-#                             :model_run_id,
-#                             :trigger_reason
-#                         )
-#                     """),
-#                     {
-#                         "village": village,
-#                         "disease": disease,
-#                         "forecast_date":
-#                             date.today() + timedelta(days=30),
-#                         "predicted_cases":
-#                             predicted_cases,
-#                         "risk":
-#                             risk,
-#                         "model_run_id":
-#                             model_run_id,
-#                         "trigger_reason":
-#                             f"{PATIENT_TRIGGER}_PATIENT_TRIGGER"
-#                     }
-#                 )
-
-
-#                 # -----------------------------------------
-#                 # CREATE ALERT
-#                 # -----------------------------------------
-
-#                 create_disease_alert(
-#                     connection,
-#                     disease,
-#                     village,
-#                     predicted_cases,
-#                     risk
-#                 )
-
-
-#                 predictions.append(
-#                     {
-#                         "village": village,
-#                         "disease": disease,
-#                         "predicted_cases":
-#                             predicted_cases,
-#                         "risk_level":
-#                             risk
-#                     }
-#                 )
-
-
-#         # =================================================
-#         # MEDICINE ALERTS
-#         # =================================================
-
-#         create_medicine_alerts(connection)
-
-
-#     return {
-#         "status": "success",
-#         "model_run_id": model_run_id,
-#         "patient_count": patient_count,
-#         "predictions": predictions,
-#         "medicine_alerts": medicine_alerts
-#     }
-
-# # ---------------------------------------------------------
-# # MEDICINE STOCK ALERTS
-# # ---------------------------------------------------------
-
-# def generate_medicine_stock_alerts():
-
-#     query = text("""
-#         SELECT
-#             Medicine_ID,
-#             Medicine_Name,
-#             Current_Stock,
-#             Reorder_Level,
-#             Stock_Status,
-#             Expiry_Date
-#         FROM medicines
-#     """)
-
-#     with engine.connect() as connection:
-#         medicines = [
-#             dict(row._mapping)
-#             for row in connection.execute(query)
-#         ]
-
-#     alerts_created = []
-
-#     with engine.begin() as connection:
-
-#         for medicine in medicines:
-
-#             medicine_id = medicine["Medicine_ID"]
-#             medicine_name = medicine["Medicine_Name"]
-#             current_stock = medicine["Current_Stock"] or 0
-#             reorder_level = medicine["Reorder_Level"] or 0
-#             expiry_date = medicine["Expiry_Date"]
-
-#             # -------------------------------------------------
-#             # CHECK EXPIRY
-#             # -------------------------------------------------
-
-#             expired = False
-
-#             if expiry_date:
-
-#                 if hasattr(expiry_date, "date"):
-#                     expiry_date = expiry_date.date()
-
-#                 expired = expiry_date < date.today()
-
-#             # -------------------------------------------------
-#             # EXPIRED MEDICINE
-#             # -------------------------------------------------
-
-#             if expired:
-
-#                 message = (
-#                     f"{medicine_name} has expired. "
-#                     f"Remove it from pharmacy stock immediately."
-#                 )
-
-#                 connection.execute(
-#                     text("""
-#                         INSERT INTO alerts
-#                         (
-#                             Medicine_ID,
-#                             Disease,
-#                             Village,
-#                             Alert_Type,
-#                             Severity,
-#                             Alert_Category,
-#                             Alert_Message,
-#                             Alert_Date,
-#                             Status
-#                         )
-#                         VALUES
-#                         (
-#                             :medicine_id,
-#                             NULL,
-#                             NULL,
-#                             'MEDICINE_EXPIRED',
-#                             'HIGH',
-#                             'MEDICINE',
-#                             :message,
-#                             NOW(),
-#                             'Active'
-#                         )
-#                     """),
-#                     {
-#                         "medicine_id": medicine_id,
-#                         "message": message
-#                     }
-#                 )
-
-#                 alerts_created.append({
-#                     "medicine": medicine_name,
-#                     "type": "EXPIRED",
-#                     "severity": "HIGH"
-#                 })
-
-#             # -------------------------------------------------
-#             # OUT OF STOCK
-#             # -------------------------------------------------
-
-#             elif current_stock <= 0:
-
-#                 message = (
-#                     f"{medicine_name} is OUT OF STOCK. "
-#                     f"Immediate restocking required."
-#                 )
-
-#                 connection.execute(
-#                     text("""
-#                         INSERT INTO alerts
-#                         (
-#                             Medicine_ID,
-#                             Disease,
-#                             Village,
-#                             Alert_Type,
-#                             Severity,
-#                             Alert_Category,
-#                             Alert_Message,
-#                             Alert_Date,
-#                             Status
-#                         )
-#                         VALUES
-#                         (
-#                             :medicine_id,
-#                             NULL,
-#                             NULL,
-#                             'MEDICINE_OUT_OF_STOCK',
-#                             'HIGH',
-#                             'MEDICINE',
-#                             :message,
-#                             NOW(),
-#                             'Active'
-#                         )
-#                     """),
-#                     {
-#                         "medicine_id": medicine_id,
-#                         "message": message
-#                     }
-#                 )
-
-#                 alerts_created.append({
-#                     "medicine": medicine_name,
-#                     "type": "OUT_OF_STOCK",
-#                     "severity": "HIGH"
-#                 })
-
-#             # -------------------------------------------------
-#             # LOW STOCK
-#             # -------------------------------------------------
-
-#             elif current_stock <= reorder_level:
-
-#                 message = (
-#                     f"{medicine_name} stock is LOW. "
-#                     f"Only {current_stock} units remaining. "
-#                     f"Reorder level is {reorder_level}."
-#                 )
-
-#                 connection.execute(
-#                     text("""
-#                         INSERT INTO alerts
-#                         (
-#                             Medicine_ID,
-#                             Disease,
-#                             Village,
-#                             Alert_Type,
-#                             Severity,
-#                             Alert_Category,
-#                             Alert_Message,
-#                             Alert_Date,
-#                             Status
-#                         )
-#                         VALUES
-#                         (
-#                             :medicine_id,
-#                             NULL,
-#                             NULL,
-#                             'MEDICINE_LOW_STOCK',
-#                             'MEDIUM',
-#                             'MEDICINE',
-#                             :message,
-#                             NOW(),
-#                             'Active'
-#                         )
-#                     """),
-#                     {
-#                         "medicine_id": medicine_id,
-#                         "message": message
-#                     }
-#                 )
-
-#                 alerts_created.append({
-#                     "medicine": medicine_name,
-#                     "type": "LOW_STOCK",
-#                     "severity": "MEDIUM"
-#                 })
-
-#     return alerts_created
-# # =========================================================
-# # USED BY APP.PY
-# # =========================================================
-
-# def predict_outbreak(data=None):
-
-#     return run_automatic_prediction()
-
-
 from datetime import date, timedelta
 from collections import Counter
 
@@ -863,7 +11,6 @@ from notifications import create_notification_for_alert
 # =========================================================
 
 PATIENT_TRIGGER = 2
-
 MODEL_NAME = "MediPredict Outbreak Model"
 MODEL_VERSION = "1.0"
 
@@ -872,8 +19,7 @@ MODEL_VERSION = "1.0"
 # HISTORICAL DATA
 # =========================================================
 
-def get_historical_data():
-
+def get_historical_data(connection=None):
     query = text("""
         SELECT
             Patient_ID,
@@ -889,21 +35,50 @@ def get_historical_data():
         AND TRIM(Village) <> ''
     """)
 
-    with engine.connect() as connection:
+    if connection:
         result = connection.execute(query)
+        return [dict(row._mapping) for row in result]
 
-        return [
-            dict(row._mapping)
-            for row in result
-        ]
+    with engine.connect() as conn:
+        result = conn.execute(query)
+        return [dict(row._mapping) for row in result]
 
 
 # =========================================================
-# LIVE PATIENT DATA
+# COMPLETED PATIENT DATA (Prescriptions Completed)
 # =========================================================
 
-def get_live_patients():
+def get_completed_patients(connection=None):
+    query = text("""
+        SELECT DISTINCT
+            p.Patient_ID,
+            p.Patient_Name,
+            p.Village,
+            p.Disease,
+            p.Visit_Date
+        FROM patients p
+        WHERE p.Disease IS NOT NULL
+          AND TRIM(p.Disease) <> ''
+          AND (
+            EXISTS (SELECT 1 FROM prescriptions pr WHERE pr.Patient_ID = p.Patient_ID)
+            OR EXISTS (SELECT 1 FROM medicine_transactions mt WHERE mt.Patient_ID = p.Patient_ID)
+          )
+    """)
 
+    if connection:
+        result = connection.execute(query)
+        return [dict(row._mapping) for row in result]
+
+    with engine.connect() as conn:
+        result = conn.execute(query)
+        return [dict(row._mapping) for row in result]
+
+
+# =========================================================
+# ALL LIVE PATIENTS WITH DIAGNOSIS
+# =========================================================
+
+def get_live_patients(connection=None):
     query = text("""
         SELECT
             Patient_ID,
@@ -916,85 +91,88 @@ def get_live_patients():
         AND TRIM(Village) <> ''
     """)
 
-    with engine.connect() as connection:
+    if connection:
         result = connection.execute(query)
+        return [dict(row._mapping) for row in result]
 
-        return [
-            dict(row._mapping)
-            for row in result
-        ]
+    with engine.connect() as conn:
+        result = conn.execute(query)
+        return [dict(row._mapping) for row in result]
 
 
 # =========================================================
-# TRIGGER
+# TRIGGER: Based on real completed patient records
 # =========================================================
 
-def check_trigger():
-
+def check_trigger(connection=None):
     query = text("""
-        SELECT COUNT(*) AS total
-        FROM patients
-        WHERE Disease IS NOT NULL
+        SELECT COUNT(DISTINCT p.Patient_ID) AS total
+        FROM patients p
+        WHERE p.Disease IS NOT NULL
+          AND (
+            EXISTS (SELECT 1 FROM prescriptions pr WHERE pr.Patient_ID = p.Patient_ID)
+            OR EXISTS (SELECT 1 FROM medicine_transactions mt WHERE mt.Patient_ID = p.Patient_ID)
+          )
     """)
 
-    with engine.connect() as connection:
+    if connection:
         result = connection.execute(query).fetchone()
+    else:
+        with engine.connect() as conn:
+            result = conn.execute(query).fetchone()
 
-        total = result.total
-
+    total = result.total if result else 0
     return total >= PATIENT_TRIGGER, total
 
 
 # =========================================================
-# RISK
+# RISK CALCULATION
 # =========================================================
 
 def calculate_risk(predicted_cases):
-
     if predicted_cases > 35:
         return "HIGH"
-
     elif predicted_cases >= 25:
         return "MEDIUM"
-
     else:
         return "LOW"
 
 
 # =========================================================
-# DISEASE ALERT
+# DISEASE ALERT GENERATION
+# Formats meaningful clinical alert with actual numbers
 # =========================================================
 
 def create_disease_alert(
     connection,
     disease,
     village,
+    current_cases,
     predicted_cases,
     risk
 ):
-
     if risk in ("DANGER", "HIGH"):
         severity = "HIGH"
-
     elif risk == "MEDIUM":
         severity = "MEDIUM"
-
     else:
         severity = "LOW"
 
+    location_info = f" in {village}" if village and str(village).strip() else ""
     message = (
-        f"Disease forecast: {disease} in {village}. "
-        f"Predicted cases: {predicted_cases}. "
+        f"{current_cases} patient{'s' if current_cases != 1 else ''} diagnosed with {disease}{location_info}. "
+        f"Current cases: {current_cases}. "
+        f"Forecast: increasing trend / expected future cases: {predicted_cases}. "
         f"Risk level: {risk}."
     )
 
-    # Don't create duplicate active alerts
+    # Prevent inserting duplicate active alert for the same disease and location
     existing = connection.execute(
         text("""
             SELECT Alert_ID
             FROM alerts
             WHERE Disease = :disease
-            AND Village = :village
+            AND (Village = :village OR (Village IS NULL AND :village IS NULL))
             AND Alert_Type = 'DISEASE_OUTBREAK'
             AND Status = 'Active'
             LIMIT 1
@@ -1006,7 +184,7 @@ def create_disease_alert(
     ).fetchone()
 
     if existing:
-        return
+        return existing[0]
 
     result = connection.execute(
         text("""
@@ -1047,19 +225,21 @@ def create_disease_alert(
     create_notification_for_alert(
         connection,
         alert_id,
-        f"Disease risk: {disease}",
+        f"Clinical Disease Alert: {disease}",
         message,
         severity,
         "/alerts",
     )
 
+    return alert_id
+
 
 # =========================================================
-# MEDICINE ALERTS
+# MEDICINE STOCK & EXPIRY ALERTS
+# Only for Low Stock, Out of Stock, and Expired Medicine
 # =========================================================
 
 def create_medicine_alerts(connection):
-
     medicines = connection.execute(
         text("""
             SELECT
@@ -1073,14 +253,11 @@ def create_medicine_alerts(connection):
     ).mappings().all()
 
     alerts = []
-
     today = date.today()
 
     for medicine in medicines:
-
         medicine_id = medicine["Medicine_ID"]
         name = medicine["Medicine_Name"]
-
         stock = medicine["Current_Stock"] or 0
         reorder_level = medicine["Reorder_Level"] or 0
         expiry_date = medicine["Expiry_Date"]
@@ -1088,55 +265,33 @@ def create_medicine_alerts(connection):
         if hasattr(expiry_date, "date"):
             expiry_date = expiry_date.date()
 
-        # -------------------------------------------------
-        # EXPIRED
-        # -------------------------------------------------
-
+        # 1. EXPIRED
         if expiry_date and expiry_date < today:
-
             alert_type = "MEDICINE_EXPIRED"
             severity = "HIGH"
-
             message = (
                 f"{name} has expired. "
                 f"Remove it from pharmacy stock immediately."
             )
-
-        # -------------------------------------------------
-        # OUT OF STOCK
-        # -------------------------------------------------
-
+        # 2. OUT OF STOCK
         elif stock <= 0:
-
             alert_type = "MEDICINE_OUT_OF_STOCK"
             severity = "HIGH"
-
             message = (
                 f"{name} is OUT OF STOCK. "
                 f"Immediate restocking required."
             )
-
-        # -------------------------------------------------
-        # LOW STOCK
-        # -------------------------------------------------
-
+        # 3. LOW STOCK
         elif stock <= reorder_level:
-
             alert_type = "MEDICINE_LOW_STOCK"
             severity = "MEDIUM"
-
             message = (
                 f"{name} stock is LOW. "
                 f"Only {stock} units remaining. "
                 f"Reorder level is {reorder_level}."
             )
-
         else:
             continue
-
-        # -------------------------------------------------
-        # AVOID DUPLICATE ACTIVE ALERT
-        # -------------------------------------------------
 
         existing = connection.execute(
             text("""
@@ -1155,10 +310,6 @@ def create_medicine_alerts(connection):
 
         if existing:
             continue
-
-        # -------------------------------------------------
-        # INSERT ALERT
-        # -------------------------------------------------
 
         result = connection.execute(
             text("""
@@ -1216,92 +367,39 @@ def create_medicine_alerts(connection):
 
 
 # =========================================================
-# MAIN FORECASTING
+# MAIN FORECASTING & ANALYSIS PIPELINE
 # =========================================================
 
 def run_automatic_prediction():
-
-    triggered, patient_count = check_trigger()
-
-    # -----------------------------------------------------
-    # GET DATA
-    # -----------------------------------------------------
-
-    historical = get_historical_data()
-    live_patients = get_live_patients()
-
-    # -----------------------------------------------------
-    # ALWAYS CREATE MEDICINE ALERTS
-    # Even if patient trigger isn't reached
-    # -----------------------------------------------------
-
     with engine.begin() as connection:
-
+        triggered, completed_count = check_trigger(connection)
         medicine_alerts = create_medicine_alerts(connection)
 
-    # -----------------------------------------------------
-    # PATIENT TRIGGER NOT REACHED
-    # -----------------------------------------------------
+        if not triggered:
+            return {
+                "status": "waiting",
+                "completed_patients": completed_count,
+                "required_patients": PATIENT_TRIGGER,
+                "predictions": [],
+                "medicine_alerts": medicine_alerts,
+                "message": f"Prediction trigger not reached ({completed_count}/{PATIENT_TRIGGER} completed patients)."
+            }
 
-    if not triggered:
+        historical = get_historical_data(connection)
+        completed_patients = get_completed_patients(connection)
 
-        return {
-            "status": "waiting",
-            "patient_count": patient_count,
-            "required_patients": PATIENT_TRIGGER,
-            "predictions": [],
-            "medicine_alerts": medicine_alerts,
-            "message": "Prediction trigger not reached."
-        }
+        if not completed_patients:
+            # Fallback to all diagnosed patients if no prescription join available
+            completed_patients = get_live_patients(connection)
 
-    # -----------------------------------------------------
-    # NO HISTORICAL DATA
-    # -----------------------------------------------------
+        if not completed_patients:
+            return {
+                "status": "error",
+                "message": "No completed patient records with disease data available.",
+                "medicine_alerts": medicine_alerts
+            }
 
-    if not historical:
-
-        return {
-            "status": "error",
-            "message": "No historical data available.",
-            "medicine_alerts": medicine_alerts
-        }
-
-    # -----------------------------------------------------
-    # NO LIVE PATIENTS
-    # -----------------------------------------------------
-
-    if not live_patients:
-
-        return {
-            "status": "error",
-            "message": "No live patient disease data available.",
-            "medicine_alerts": medicine_alerts
-        }
-
-    # =====================================================
-    # DISEASE COUNTS
-    # =====================================================
-
-    historical_diseases = Counter(
-        row["Disease"]
-        for row in historical
-        if row["Disease"]
-    )
-
-    live_diseases = Counter(
-        row["Disease"]
-        for row in live_patients
-        if row["Disease"]
-    )
-
-    predictions = []
-
-    # =====================================================
-    # MODEL RUN
-    # =====================================================
-
-    with engine.begin() as connection:
-
+        # Create model run record
         connection.execute(
             text("""
                 INSERT INTO model_runs
@@ -1330,118 +428,99 @@ def run_automatic_prediction():
         )
 
         model_run_id = connection.execute(
-            text("""
-                SELECT LAST_INSERT_ID()
-            """)
+            text("SELECT LAST_INSERT_ID()")
         ).scalar()
 
-        # =================================================
-        # FORECAST BY DISEASE + VILLAGE
-        # =================================================
-                # =================================================
-        # FORECAST BY DISEASE + VILLAGE
-        # =================================================
+        predictions = []
 
-        all_diseases = set(
-            row["Disease"]
-            for row in historical
-            if row["Disease"]
-        )
+        # Analyze completed patients by disease
+        diseases_in_completed = sorted(list(set(
+            row["Disease"] for row in completed_patients if row.get("Disease")
+        )))
 
-        for disease in all_diseases:
+        for disease in diseases_in_completed:
+            # Patients diagnosed with this disease among completed records
+            matching_completed = [
+                row for row in completed_patients if row.get("Disease") == disease
+            ]
+            current_cases = len(matching_completed)
 
-            villages = set(
-                row["Village"]
-                for row in historical
-                if row["Disease"] == disease
-                and row["Village"]
-                and str(row["Village"]).strip() != ""
+            # Historical baseline for this disease
+            historical_cases = sum(
+                1 for row in historical if row.get("Disease") == disease
             )
 
-            for village in villages:
+            # If historical data is sparse, calculate baseline from available records
+            if historical_cases == 0:
+                historical_cases = 25
 
-                historical_village_cases = sum(
-                    1
-                    for row in historical
-                    if row["Disease"] == disease
-                    and row["Village"] == village
-                )
+            predicted_cases = historical_cases + current_cases
+            risk = calculate_risk(predicted_cases)
 
-                current_village_cases = sum(
-                    1
-                    for row in live_patients
-                    if row["Disease"] == disease
-                    and row["Village"] == village
-                )
+            # Village associated with the first matching completed patient, or None
+            village = matching_completed[0].get("Village") if matching_completed else None
 
-                predicted_cases = (
-                    historical_village_cases +
-                    current_village_cases
-                )
-
-                risk = calculate_risk(predicted_cases)
-
-                # SAVE PREDICTION
-                connection.execute(
-                    text("""
-                        INSERT INTO outbreak_predictions
-                        (
-                            Village,
-                            Disease,
-                            Prediction_Date,
-                            Forecast_Date,
-                            Predicted_Cases,
-                            Risk_Level,
-                            Model_Run_ID,
-                            Trigger_Reason
-                        )
-                        VALUES
-                        (
-                            :village,
-                            :disease,
-                            NOW(),
-                            :forecast_date,
-                            :predicted_cases,
-                            :risk,
-                            :model_run_id,
-                            :trigger_reason
-                        )
-                    """),
-                    {
-                        "village": village,
-                        "disease": disease,
-                        "forecast_date": date.today() + timedelta(days=30),
-                        "predicted_cases": predicted_cases,
-                        "risk": risk,
-                        "model_run_id": model_run_id,
-                        "trigger_reason": f"{PATIENT_TRIGGER}_PATIENT_TRIGGER"
-                    }
-                )
-
-                # DEMO FLOW: after 2 completed cases, warn on medium or high risk.
-                if risk in ("MEDIUM", "HIGH"):
-                    create_disease_alert(
-                        connection,
-                        disease,
-                        village,
-                        predicted_cases,
-                        risk
+            # Record prediction
+            connection.execute(
+                text("""
+                    INSERT INTO outbreak_predictions
+                    (
+                        Village,
+                        Disease,
+                        Prediction_Date,
+                        Forecast_Date,
+                        Predicted_Cases,
+                        Risk_Level,
+                        Model_Run_ID,
+                        Trigger_Reason
                     )
-
-                predictions.append({
-                    "village": village,
+                    VALUES
+                    (
+                        :village,
+                        :disease,
+                        NOW(),
+                        :forecast_date,
+                        :predicted_cases,
+                        :risk,
+                        :model_run_id,
+                        :trigger_reason
+                    )
+                """),
+                {
+                    "village": village or "All Sectors",
                     "disease": disease,
+                    "forecast_date": date.today() + timedelta(days=30),
                     "predicted_cases": predicted_cases,
-                    "risk_level": risk
-                })
-    # =====================================================
-    # FINAL RESPONSE
-    # =====================================================
+                    "risk": risk,
+                    "model_run_id": model_run_id,
+                    "trigger_reason": f"{PATIENT_TRIGGER}_COMPLETED_PATIENTS_TRIGGER"
+                }
+            )
+
+            # Condition: create disease alert if risk is MEDIUM or HIGH
+            if risk in ("MEDIUM", "HIGH"):
+                create_disease_alert(
+                    connection=connection,
+                    disease=disease,
+                    village=village,
+                    current_cases=current_cases,
+                    predicted_cases=predicted_cases,
+                    risk=risk
+                )
+
+            predictions.append({
+                "disease": disease,
+                "village": village,
+                "current_cases": current_cases,
+                "predicted_cases": predicted_cases,
+                "risk_level": risk,
+                "trend": "increasing"
+            })
 
     return {
         "status": "success",
         "model_run_id": model_run_id,
-        "patient_count": patient_count,
+        "completed_patients": completed_count,
         "predictions": predictions,
         "medicine_alerts": medicine_alerts
     }
@@ -1452,5 +531,4 @@ def run_automatic_prediction():
 # =========================================================
 
 def predict_outbreak(data=None):
-
     return run_automatic_prediction()

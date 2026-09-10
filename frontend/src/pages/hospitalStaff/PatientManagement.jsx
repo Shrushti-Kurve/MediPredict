@@ -75,8 +75,7 @@ const PatientManagement = () => {
     emergencyContact: '',
     disease: '',
     doctor: 'Dr. Sarah Paul',
-    lastVisit: '',
-    nextVisit: ''
+    lastVisit: ''
   });
 
   // Set patient age automatically if date of birth is selected
@@ -120,8 +119,7 @@ const PatientManagement = () => {
       emergencyContact: '',
       disease: '',
       doctor: 'Dr. Sarah Paul',
-      lastVisit: new Date().toISOString().split('T')[0],
-      nextVisit: ''
+      lastVisit: new Date().toISOString().split('T')[0]
     });
     setAddModalOpen(true);
   };
@@ -167,8 +165,7 @@ const PatientManagement = () => {
       emergencyContact: patient.emergencyContact || '',
       disease: patient.disease || '',
       doctor: patient.doctor || 'Dr. Sarah Paul',
-      lastVisit: patient.lastVisit || '',
-      nextVisit: patient.nextVisit || ''
+      lastVisit: patient.lastVisit || ''
     });
     setEditModalOpen(true);
   };
@@ -222,8 +219,10 @@ const PatientManagement = () => {
   // Get distinct list of diseases for filtering dropdown
   const uniqueDiseases = [...new Set(patients.map(p => p.disease).filter(Boolean))];
 
+  const activePatients = patients.filter(patient => !(patient.status === 'Prescribed' || patient.prescribed === true));
+
   // Filtering Logic (Status filter removed per requirement 5)
-  const filteredPatients = patients.filter(patient => {
+  const filteredPatients = activePatients.filter(patient => {
     const query = searchQuery.toLowerCase().trim();
     const matchesSearch = !query || 
       (patient.name && patient.name.toLowerCase().includes(query)) ||
@@ -298,7 +297,7 @@ const PatientManagement = () => {
             <div className="permission-info">
               <FaInfoCircle className="permission-icon" />
               <span>
-                <strong>Hospital Staff Protocol:</strong> Staff registers patient demographics, admitting diagnosis, and schedules visits. 
+                <strong>Hospital Staff Protocol:</strong> Staff registers patient demographics and admitting diagnosis. 
                 Prescription medications are exclusively prescribed and modified by licensed Doctors.
               </span>
             </div>
@@ -471,10 +470,6 @@ const PatientManagement = () => {
                     <div className="detail-field">
                       <span className="detail-label">Last Visit Date</span>
                       <span className="detail-val">{selectedPatient.lastVisit || 'N/A'}</span>
-                    </div>
-                    <div className="detail-field">
-                      <span className="detail-label">Next Scheduled Visit</span>
-                      <span className="detail-val">{selectedPatient.nextVisit || 'None Scheduled'}</span>
                     </div>
                   </div>
 
@@ -675,28 +670,16 @@ const PatientManagement = () => {
                       </div>
                     </div>
 
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label htmlFor="lastVisit">Admit / Visit Date *</label>
-                        <input 
-                          type="date" 
-                          id="lastVisit" 
-                          className="form-control" 
-                          value={patientForm.lastVisit} 
-                          onChange={handleInputChange} 
-                          required 
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="nextVisit">Next Scheduled Follow-up (Optional)</label>
-                        <input 
-                          type="date" 
-                          id="nextVisit" 
-                          className="form-control" 
-                          value={patientForm.nextVisit} 
-                          onChange={handleInputChange} 
-                        />
-                      </div>
+                    <div className="form-group">
+                      <label htmlFor="lastVisit">Admit / Visit Date *</label>
+                      <input 
+                        type="date" 
+                        id="lastVisit" 
+                        className="form-control" 
+                        value={patientForm.lastVisit} 
+                        onChange={handleInputChange} 
+                        required 
+                      />
                     </div>
                   </div>
                   <div className="modal-footer">
@@ -799,15 +782,9 @@ const PatientManagement = () => {
                       </div>
                     </div>
 
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label htmlFor="edit-lastVisit">Last Visit Date</label>
-                        <input type="date" id="edit-lastVisit" className="form-control" value={patientForm.lastVisit} onChange={handleInputChange} />
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="edit-nextVisit">Next Scheduled Follow-up</label>
-                        <input type="date" id="edit-nextVisit" className="form-control" value={patientForm.nextVisit} onChange={handleInputChange} />
-                      </div>
+                    <div className="form-group">
+                      <label htmlFor="edit-lastVisit">Last Visit Date</label>
+                      <input type="date" id="edit-lastVisit" className="form-control" value={patientForm.lastVisit} onChange={handleInputChange} />
                     </div>
                   </div>
                   <div className="modal-footer">

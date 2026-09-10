@@ -61,8 +61,17 @@ const DashboardHeader = ({ title, toggleSidebar }) => {
 
     loadNotifications();
 
+    const handleAlertsUpdate = () => {
+      loadNotifications();
+    };
+
+    window.addEventListener('storage', handleAlertsUpdate);
+    window.addEventListener('alertsUpdated', handleAlertsUpdate);
+
     return () => {
       isMounted = false;
+      window.removeEventListener('storage', handleAlertsUpdate);
+      window.removeEventListener('alertsUpdated', handleAlertsUpdate);
     };
   }, [user?.role]);
 
@@ -80,7 +89,7 @@ const DashboardHeader = ({ title, toggleSidebar }) => {
   const notificationCount = notifications.length;
 
   const getAlertRoute = (notification) => {
-    if (notification?.link) return notification.link;
+    if (notification?.link && notification.link !== '/alerts') return notification.link;
     if (!user?.role) return '/doctor/alerts';
     if (user.role === 'doctor') return '/doctor/alerts';
     if (user.role === 'hospitalStaff') return '/hospital/alerts';
@@ -89,18 +98,34 @@ const DashboardHeader = ({ title, toggleSidebar }) => {
     return '/doctor/alerts';
   };
 
-  const handleNotificationClick = (alert) => {
+  const handleNotificationClick = (alert, event) => {
+    const route = getAlertRoute(alert);
+
+    if (event && typeof event.preventDefault === 'function') {
+      event.preventDefault();
+    }
+
     if (alert?.id) {
       markAlertsAsSeen([alert.id]);
       setNotifications(prev => prev.filter(item => item.id !== alert.id));
     }
+
     setShowNotifications(false);
+    navigate(route);
   };
 
   return (
     <header className="dashboard-header">
       <div className="db-header-left">
-        <button className="db-sidebar-toggle" onClick={() => toggleSidebar && toggleSidebar(true)} aria-label="Open Sidebar">
+        <button
+          className="db-sidebar-toggle"
+          onClick={() => {
+            if (typeof toggleSidebar === 'function') {
+              toggleSidebar((prev) => !prev);
+            }
+          }}
+          aria-label="Toggle Sidebar"
+        >
           <FaBars />
         </button>
 
@@ -140,7 +165,7 @@ const DashboardHeader = ({ title, toggleSidebar }) => {
                         key={alert.id}
                         to={getAlertRoute(alert)}
                         className="db-notification-item"
-                        onClick={() => handleNotificationClick(alert)}
+                        onClick={(event) => handleNotificationClick(alert, event)}
                         style={{ textDecoration: 'none', color: 'inherit' }}
                       >
                         <div className={`db-notification-dot db-notification-${alert.severity.toLowerCase()}`} />

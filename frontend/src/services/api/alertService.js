@@ -16,12 +16,12 @@ const isMeaningfulAlertEntry = (alert = {}) => {
   const category = `${alert.category || ''} ${alert.Alert_Category || ''}`.toLowerCase();
 
   if (!text.trim()) return false;
-  if (/new patient|patient added|patient updated|patient registered|registered by|updated their profile|profile updated|prescription saved|prescription added|added to inventory|medicine added|updated by|recorded in system/.test(text)) {
+  if (/new patient|patient added|patient updated|patient registered|registered by|updated their profile|profile updated|prescription saved|prescription added|prescription updated|added to inventory|medicine added|updated by|recorded in system|dispensed/.test(text)) {
     return false;
   }
 
-  const isMedicine = /medicine|stock|inventory|expiry|expired|low stock|out of stock|reorder|dispensed|pharmacy/.test(text) || /medicine/.test(category);
-  const isDisease = /disease|outbreak|forecast|risk|clinical|infection|surveillance|diagnosis|severity|critical/.test(text) || /disease/.test(category);
+  const isMedicine = /medicine|stock|inventory|expiry|expired|low stock|out of stock/.test(text) || /medicine/.test(category);
+  const isDisease = /disease|outbreak|forecast|risk|clinical disease alert|diagnosed with/.test(text) || /disease/.test(category);
 
   return isMedicine || isDisease;
 };
@@ -55,7 +55,8 @@ const normalizeAlert = (alert = {}, fallbackRole = '') => {
     category: alert.category || alert.Alert_Category || '',
     alert_type: alert.alert_type || alert.Alert_Type || '',
     link: alert.link || alert.Link || alert.path || alert.Path || routeForRole[role] || '/doctor/alerts',
-    raw: alert
+    raw: alert,
+    seen: Boolean(alert.seen || alert.notificationRead)
   };
 };
 
@@ -76,12 +77,13 @@ export const getRoleAlerts = async (role) => {
   return sourceAlerts
     .filter((alert) => {
       if (!isMeaningfulAlertEntry(alert)) return false;
-      if (alert.read) return false;
+      // Do not show alerts that have already been seen/read in the notification bell
+      if (alert.seen || alert.notificationRead) return false;
 
       const dateText = alert.date || alert.Alert_Date || alert.created_at || alert.Created_At || alert.timestamp || alert.Timestamp || '';
       if (dateText) {
         const alertTime = new Date(dateText.replace(' ', 'T')).getTime();
-        if (!Number.isNaN(alertTime) && Date.now() - alertTime > 7 * 24 * 60 * 60 * 1000) {
+        if (!Number.isNaN(alertTime) && Date.now() - alertTime > 30 * 24 * 60 * 60 * 1000) {
           return false;
         }
       }
@@ -95,7 +97,7 @@ export const getRoleAlerts = async (role) => {
       const category = (alert.category || '').toString().toUpperCase();
       const alertType = (alert.alert_type || '').toString().toUpperCase();
       const isMedicine = category.includes('MEDICINE') || alertType.includes('MEDICINE') || /medicine|stock|inventory|expiry|out of stock|low stock/.test(messageText);
-      const isDisease = category.includes('DISEASE') || alertType.includes('DISEASE') || /disease|outbreak|forecast|risk|critical|infection|clinical|surveillance/.test(messageText);
+      const isDisease = category.includes('DISEASE') || alertType.includes('DISEASE') || /disease|outbreak|forecast|risk|clinical disease alert|diagnosed with/.test(messageText);
 
       if (!isMedicine && !isDisease) return false;
       if (alertRole === role) return true;
